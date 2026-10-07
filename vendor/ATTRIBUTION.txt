@@ -1,0 +1,37 @@
+Dictionary data: JMdict_e, Electronic Dictionary Research and Development Group
+(EDRDG), https://www.edrdg.org/ . Licensed under CC BY-SA 4.0:
+https://www.edrdg.org/edrdg/licence.html
+https://creativecommons.org/licenses/by-sa/4.0/
+Downloaded from https://www.edrdg.org/pub/Nihongo/JMdict_e.gz on 2026-10-05.
+The derived SQLite dictionary retains this attribution and licence. Changes:
+expanded spelling/reading pairs with restricted senses, indexed lookup forms,
+formatted English glosses and mapped grammatical flags for lookup.
+
+Name data: JMnedict, Electronic Dictionary Research and Development Group
+(EDRDG), https://www.edrdg.org/enamdict/enamdict_doc.html . CC BY-SA 4.0 under
+the same EDRDG licence statement above. Downloaded from
+https://www.edrdg.org/pub/Nihongo/JMnedict.xml.gz on 2026-10-06.
+Changes: selected personal/place/station name categories, expanded restricted
+spelling/reading pairs, English translations with name-type labels, and indexed
+forms ordered behind ordinary definitions. Readings and classifications are
+provided by JMnedict; ambiguous name readings are retained as alternatives.
+
+Deinflection rules and algorithm: Yomichan Authors, copyright 2016-2022,
+GPL-3.0-or-later. Rules downloaded on 2026-10-05 from:
+https://github.com/FooSoft/yomichan/blob/master/ext/data/deinflect.json
+Algorithm adapted from ext/js/language/deinflector.js in that repository.
+Changes: Qt 5 compatible JavaScript, deduplication and bounded expansion.
+See YOMICHAN-LICENSE and GPL-3.0.txt.
+
+TranslatePen application code is GPL-3.0-or-later. Vendor firmware and extracted
+PenPower resources are separate, proprietary materials, not included in this
+application’s licence. Only patch scripts and independently authored code are
+intended for sharing; do not redistribute the vendor executable/resources.
+
+Optional server Japanese OCR: Manga OCR by kha-white, Apache-2.0.
+https://github.com/kha-white/manga-ocr
+https://huggingface.co/kha-white/manga-ocr-base
+Pinned model revision aa6573bd10b0d446cbf622e29c3e084914df9741.
+Used locally to corroborate small kana; other characters come from the PP-OCRv5
+pipeline. The model and Python dependency environment are separate build
+artifacts, not embedded in the pen application.

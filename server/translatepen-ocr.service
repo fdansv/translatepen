@@ -1,0 +1,19 @@
+[Unit]
+Description=TranslatePen home Japanese OCR
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/repos/translatepen
+ExecStart=%h/repos/translatepen/build/ocr-server-japanese/bin/python scripts/ocr_server.py --model build/ppocrv5-server.onnx --japanese-model build/manga-ocr-model --bind ${TRANSLATEPEN_OCR_BIND} --port 8193
+Restart=on-failure
+RestartSec=3
+Environment=TRANSLATEPEN_OCR_BIND=127.0.0.1
+EnvironmentFile=-%h/repos/translatepen/.runtime/ocr.env
+Environment=PYTHONUNBUFFERED=1
+Environment=HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

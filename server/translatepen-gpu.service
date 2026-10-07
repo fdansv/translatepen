@@ -1,0 +1,17 @@
+[Unit]
+Description=TranslatePen Japanese GPU OCR corroborator
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/repos/translatepen
+ExecStart=%h/repos/translatepen/build/llama-vulkan-b11455/llama-b11455/llama-server -m build/paddle-manga-gguf/PaddleOCR-VL-manga-Q4_K_M.gguf --mmproj build/paddle-manga-gguf/mmproj-Q8_0.gguf --device Vulkan0 --mmproj-device Vulkan0 -ngl 99 -c 4096 -np 1 -t 2 --host 127.0.0.1 --port 8194 --temp 0 --top-k 1 -n 128 --cache-ram 0 --no-cache-prompt -lv 4
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+Environment=HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

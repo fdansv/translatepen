@@ -1,0 +1,19 @@
+TranslatePen
+Copyright (C) 2026 Francisco Dans and contributors
+Application code: GPL-3.0-or-later. See LICENSE.
+
+Deinflection code/rules are adapted from Yomichan Authors, Copyright 2016-2022,
+GPL-3.0-or-later. See vendor/YOMICHAN-LICENSE and vendor/ATTRIBUTION.txt.
+
+JMdict/JMnedict data and derived dictionaries: EDRDG / Jim Breen,
+CC BY-SA 4.0. Dictionary data is not relicensed by the application's GPL.
+See vendor/ATTRIBUTION.txt and https://www.edrdg.org/edrdg/licence.html .
+
+PenPower firmware, extracted resources, fonts and dictionaries are separate
+vendor material and are not distributed by this repository. The Migaku
+extension and account sessions are also not distributed.
+
+OCR models/runtimes are separate downloads. PP-OCRv5 originates from
+PaddlePaddle/PaddleOCR; the pinned ONNX conversion is from RapidAI/RapidOCR.
+Manga OCR is by kha-white, Apache-2.0. Optional GPU models and llama.cpp retain
+their own licenses. See docs/ocr.md and vendor/ATTRIBUTION.txt for source links.

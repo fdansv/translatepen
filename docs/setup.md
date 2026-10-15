@@ -38,8 +38,10 @@ Check `http://YOUR_SERVER_IP:8193/health` from another LAN client.
 
 For Migaku, follow the [API quick start](https://github.com/fdansv/migaku-api#quick-start-linux).
 Run its offline doctor before logging in. Card enrichment and translation need
-the exact supported **1.31.0.16** extension assets; a newly installed different
-version may require an adapter update. Use your own Migaku account and extension.
+the exact supported extension assets. **1.31.0.16** is verified; the API also has
+an explicit experimental **1.31.0.17** profile with an unverified authenticated
+flow. Read its compatibility notes before choosing that path. Use your own
+Migaku account and extension; the project cannot distribute an old extension.
 Check `/worker` reports `authenticated`, `ready` and `initial_sync_done`.
 
 Configure a persistent bearer token and LAN bind as described in

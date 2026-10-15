@@ -26,6 +26,7 @@ private:
     bool validCenter(QObject *center);
     void submit(const QByteArray &data, int requestId);
     QUrl m_endpoint { QStringLiteral("http://192.168.8.199:8193/ocr") };
+    QByteArray m_token;
     QNetworkAccessManager m_network;
     QPointer<QNetworkReply> m_reply;
     QTimer m_timeout;

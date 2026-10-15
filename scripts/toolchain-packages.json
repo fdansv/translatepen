@@ -1,0 +1,627 @@
+{
+  "format": 1,
+  "host": "Linux x86_64 (Ubuntu 24.04)",
+  "packages": [
+    {
+      "file": "binutils-aarch64-linux-gnu_2.42-4ubuntu2.10_amd64.deb",
+      "sha256": "6bb25a05c50681e240b453f6572d8066f2358dee984d0ff1dbcd08852642adf2",
+      "target": "cross",
+      "urls": [
+        "https://archive.ubuntu.com/ubuntu/pool/main/b/binutils/binutils-aarch64-linux-gnu_2.42-4ubuntu2.10_amd64.deb"
+      ]
+    },
+    {
+      "file": "cpp-13-aarch64-linux-gnu_13.3.0-6ubuntu2~24.04.1cross1_amd64.deb",
+      "sha256": "6aafe2a7820e497263d871519326dc3e5bcecc0583cc49852c05abda8c1d2e55",
+      "target": "cross",
+      "urls": [
+        "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-13-cross/cpp-13-aarch64-linux-gnu_13.3.0-6ubuntu2~24.04.1cross1_amd64.deb"
+      ]
+    },
+    {
+      "file": "g++-13-aarch64-linux-gnu_13.3.0-6ubuntu2~24.04.1cross1_amd64.deb",
+      "sha256": "aa6dcef263e296de40464b7a31cd5f6f8f93e2c407874dc07b176dd2e7e87650",
+      "target": "cross",
+      "urls": [
+        "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-13-cross/g++-13-aarch64-linux-gnu_13.3.0-6ubuntu2~24.04.1cross1_amd64.deb"
+      ]
+    },
+    {
+      "file": "gcc-13-aarch64-linux-gnu-base_13.3.0-6ubuntu2~24.04.1cross1_amd64.deb",
+      "sha256": "2246058ef9d122c26c9ae9b2ab6843d2504806e68e45c7842dd30dda15e94723",
+      "target": "cross",
+      "urls": [
+        "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-13-cross/gcc-13-aarch64-linux-gnu-base_13.3.0-6ubuntu2~24.04.1cross1_amd64.deb"
+      ]
+    },
+    {
+      "file": "gcc-13-aarch64-linux-gnu_13.3.0-6ubuntu2~24.04.1cross1_amd64.deb",
+      "sha256": "154d549389d13010bc0ef2e89c7870e22c4193afa69335f8e57c5fc891e75578",
+      "target": "cross",
+      "urls": [
+        "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-13-cross/gcc-13-aarch64-linux-gnu_13.3.0-6ubuntu2~24.04.1cross1_amd64.deb"
+      ]
+    },
+    {
+      "file": "gcc-13-cross-base_13.3.0-6ubuntu2~24.04.1cross1_all.deb",
+      "sha256": "02676468c2f71d57be2fbd6e6f74462ab419a49db15a1b1f031b2460a2954cd3",
+      "target": "cross",
+      "urls": [
+        "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-13-cross/gcc-13-cross-base_13.3.0-6ubuntu2~24.04.1cross1_all.deb"
+      ]
+    },
+    {
+      "file": "libgcc-13-dev-arm64-cross_13.3.0-6ubuntu2~24.04.1cross1_all.deb",
+      "sha256": "eda9d79e18170fd46ee0ed62aa391f52bfe8c1a336d53162f2e1c0a675af548f",
+      "target": "cross",
+      "urls": [
+        "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-13-cross/libgcc-13-dev-arm64-cross_13.3.0-6ubuntu2~24.04.1cross1_all.deb"
+      ]
+    },
+    {
+      "file": "libgcc-s1-arm64-cross_14.2.0-4ubuntu2~24.04.1cross1_all.deb",
+      "sha256": "be13b35e1c56c4158817e668f442a363db6f4e13b2ffed1ef6cf91df9961e35d",
+      "target": "cross",
+      "urls": [
+        "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-14-cross/libgcc-s1-arm64-cross_14.2.0-4ubuntu2~24.04.1cross1_all.deb"
+      ]
+    },
+    {
+      "file": "libstdc++-13-dev-arm64-cross_13.3.0-6ubuntu2~24.04.1cross1_all.deb",
+      "sha256": "6682425bf6b14a00036684fb338a59a9c5ff89187d0feca5898cc8b0eaa1abfd",
+      "target": "cross",
+      "urls": [
+        "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-13-cross/libstdc++-13-dev-arm64-cross_13.3.0-6ubuntu2~24.04.1cross1_all.deb"
+      ]
+    },
+    {
+      "file": "libblkid1_2.33.1-0.1_arm64.deb",
+      "sha256": "c2b8da51e4150020c38dbbdd4c072eaff2dc8ba86bb1ea750777e643833b3e76",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/u/util-linux/libblkid1_2.33.1-0.1_arm64.deb",
+        "https://snapshot.debian.org/file/33ac2d93cbd6c9aa63a9fb53b49a08261c8312a2"
+      ]
+    },
+    {
+      "file": "libbsd0_0.9.1-2+deb10u1_arm64.deb",
+      "sha256": "38a16bfa67657ba928b4ff880a93769d729fde1bb1d46d87a7bbca5e85634f20",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libb/libbsd/libbsd0_0.9.1-2+deb10u1_arm64.deb",
+        "https://snapshot.debian.org/file/15823844666fba6e21e3da1e8c8feac39df79c1d"
+      ]
+    },
+    {
+      "file": "libc6-dev_2.28-10+deb10u1_arm64.deb",
+      "sha256": "04097716018288cef8b82339faa1a9847838b89f39574b5b169f4657da8bf269",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/g/glibc/libc6-dev_2.28-10+deb10u1_arm64.deb",
+        "https://snapshot.debian.org/file/072d252ffe5c7b7e3053736560c289cf90a56a33"
+      ]
+    },
+    {
+      "file": "libc6_2.28-10+deb10u1_arm64.deb",
+      "sha256": "09f5e92b1527cdc06b757499bb4d97ddf1b064fc3d163f978e5de18b131cd330",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/g/glibc/libc6_2.28-10+deb10u1_arm64.deb",
+        "https://snapshot.debian.org/file/019e73deb0348381ed02baf7488bf45fd9f6ef28"
+      ]
+    },
+    {
+      "file": "libcairo2_1.16.0-4+deb10u1_arm64.deb",
+      "sha256": "69f9583661d6991532a30b62a7673c7ddfbb2731db554ed5cd85f65b6e538f74",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/c/cairo/libcairo2_1.16.0-4+deb10u1_arm64.deb",
+        "https://snapshot.debian.org/file/3afb91671550141064f1406f11c2b45f2c3521b1"
+      ]
+    },
+    {
+      "file": "libdatrie1_0.2.12-2_arm64.deb",
+      "sha256": "c661b2f9847fd1ca850c6ab26e9a6fe0b2998f55caf25d25c5e2e73645f868e5",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libd/libdatrie/libdatrie1_0.2.12-2_arm64.deb",
+        "https://snapshot.debian.org/file/d76e0b998af60d94771eb79d8e490c3f56464f5c"
+      ]
+    },
+    {
+      "file": "libexpat1_2.2.6-2+deb10u4_arm64.deb",
+      "sha256": "35469262108a91a75d38fefb46e4bdf3f3b99351792a2c0f73339d2d53adb93d",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/e/expat/libexpat1_2.2.6-2+deb10u4_arm64.deb",
+        "https://snapshot.debian.org/file/8ab9e57492402d97f4720bf7fff5b30572005f52"
+      ]
+    },
+    {
+      "file": "libffi6_3.2.1-9_arm64.deb",
+      "sha256": "c5f7f4158dc6821bf37dd44ce0fe4399b5798d4ae7e821ad85b63059a2b31c0f",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libf/libffi/libffi6_3.2.1-9_arm64.deb",
+        "https://snapshot.debian.org/file/ef45fa98446f812226ea52f8668a41b403ef96cb"
+      ]
+    },
+    {
+      "file": "libfontconfig1_2.13.1-2_arm64.deb",
+      "sha256": "75e63900fe40ab9e5d1e1f58458c40330f9cff9805b92749c44d54b1ac1da8a4",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/f/fontconfig/libfontconfig1_2.13.1-2_arm64.deb",
+        "https://snapshot.debian.org/file/cb9807db4d1fcc239fc90f73039edd749b97592a"
+      ]
+    },
+    {
+      "file": "libfreetype6_2.9.1-3+deb10u3_arm64.deb",
+      "sha256": "a469e52374f924fea4f9262c5fdf9d4e49fbff3eed68acf6f9b298510d58aa30",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/f/freetype/libfreetype6_2.9.1-3+deb10u3_arm64.deb",
+        "https://snapshot.debian.org/file/d2d8622f06a7850e0e3454059a7e8afebbe84244"
+      ]
+    },
+    {
+      "file": "libfribidi0_1.0.5-3.1+deb10u2_arm64.deb",
+      "sha256": "eab719e8627c6c3a517b0d44db4e5b5b89cb0b8dcfcc7f973d25f090b01f1d62",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/f/fribidi/libfribidi0_1.0.5-3.1+deb10u2_arm64.deb",
+        "https://snapshot.debian.org/file/6dcd3c7db5a55e1b150766556c8d71357ddfa1c0"
+      ]
+    },
+    {
+      "file": "libgcc1_8.3.0-6_arm64.deb",
+      "sha256": "2851ac25d12958586c035de5ec4f2fc17272dec48f776dd0dd24c62f62674fd9",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/g/gcc-8/libgcc1_8.3.0-6_arm64.deb",
+        "https://snapshot.debian.org/file/42ca8271e90f3d15b9a39d3d94f141ecdf2a3312"
+      ]
+    },
+    {
+      "file": "libgif7_5.1.4-3_arm64.deb",
+      "sha256": "e476d43fb9d874f6110ca8c4192763e655312a6dc091befb9270099b4d4c4be9",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/g/giflib/libgif7_5.1.4-3_arm64.deb",
+        "https://snapshot.debian.org/file/e40cd582223ac76cf20d6a9a4136e750b24a3d51"
+      ]
+    },
+    {
+      "file": "libglib2.0-0_2.58.3-2+deb10u3_arm64.deb",
+      "sha256": "011943577b494c84a0fcdfc97c86847a67cf626131a45789e80792d33dc834fb",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/g/glib2.0/libglib2.0-0_2.58.3-2+deb10u3_arm64.deb",
+        "https://snapshot.debian.org/file/1ed135e9b50090d51ad997e5a281da2c539dbe01"
+      ]
+    },
+    {
+      "file": "libgomp1_8.3.0-6_arm64.deb",
+      "sha256": "a147bccae845e5405941df3f761065cbc68f06bb29fccb46bfce7dff562cc0fa",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/g/gcc-8/libgomp1_8.3.0-6_arm64.deb",
+        "https://snapshot.debian.org/file/0c9da8bcaad8705412f4d1c30247643fff0a0e42"
+      ]
+    },
+    {
+      "file": "libgraphite2-3_1.3.13-7_arm64.deb",
+      "sha256": "dab0d61c2544978289d778b38b51d359140c559f6303e1a77a687af99859113a",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/g/graphite2/libgraphite2-3_1.3.13-7_arm64.deb",
+        "https://snapshot.debian.org/file/78d1fd361c23477fef709c888d3134a6b0c7138f"
+      ]
+    },
+    {
+      "file": "libharfbuzz0b_2.3.1-1_arm64.deb",
+      "sha256": "bb4812967a524ecb220fcfd6f9c2bfcb8a0498d612fd6fc0e922998bb88ae3d7",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/h/harfbuzz/libharfbuzz0b_2.3.1-1_arm64.deb",
+        "https://snapshot.debian.org/file/f7b3f55e3eec91def5ab2031b2883ace809462fd"
+      ]
+    },
+    {
+      "file": "libicu63_63.1-6+deb10u3_arm64.deb",
+      "sha256": "6f68c1514e49692dc88c3adb3f3dbac4a8c8a9ca2cbebf6320f7c3836b7a5a8d",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/i/icu/libicu63_63.1-6+deb10u3_arm64.deb",
+        "https://snapshot.debian.org/file/aa44c25d377ed9ed5c45ed122bd6428ed6d63930"
+      ]
+    },
+    {
+      "file": "libjbig0_2.1-3.1+b2_arm64.deb",
+      "sha256": "b71b3e62e162f64cb24466bf7c6e40b05ce2a67ca7fed26d267d498f2896d549",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/j/jbigkit/libjbig0_2.1-3.1+b2_arm64.deb",
+        "https://snapshot.debian.org/file/fc32a389d9bb4003efb247a75588451c7d9594b6"
+      ]
+    },
+    {
+      "file": "libjpeg62-turbo_1.5.2-2+deb10u1_arm64.deb",
+      "sha256": "3e30730c819d6664b9f40b192585377be128fca970496641b98bcf8c405ef6e8",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libj/libjpeg-turbo/libjpeg62-turbo_1.5.2-2+deb10u1_arm64.deb",
+        "https://snapshot.debian.org/file/49f5e6fa61e3a7736f96f1dde13af1201002b628"
+      ]
+    },
+    {
+      "file": "liblzma5_5.2.4-1+deb10u1_arm64.deb",
+      "sha256": "dc81fe6c195f0d2498b2043bbc1443d881d7196dbc445f052dd58f574b3ab95a",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/x/xz-utils/liblzma5_5.2.4-1+deb10u1_arm64.deb",
+        "https://snapshot.debian.org/file/e83caf45813928672d50a4475f2433cc4249f72f"
+      ]
+    },
+    {
+      "file": "libmount1_2.33.1-0.1_arm64.deb",
+      "sha256": "0477554f98742ec2a93d3812e5eee8126d39b99a3fe3f252190180945f47f9b7",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/u/util-linux/libmount1_2.33.1-0.1_arm64.deb",
+        "https://snapshot.debian.org/file/d0fab447cd08384cc6ff1cc38ba2cbf27e1877f2"
+      ]
+    },
+    {
+      "file": "libopenjp2-7_2.3.0-2+deb10u2_arm64.deb",
+      "sha256": "b87a6276565d81af447bf1580e5c9fe7a7e1cc40c5cb1dcc980ac53bc7f6c018",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/o/openjpeg2/libopenjp2-7_2.3.0-2+deb10u2_arm64.deb",
+        "https://snapshot.debian.org/file/d64af95a6198d11403ef4b04f7a9750a39ca3e92"
+      ]
+    },
+    {
+      "file": "libpango-1.0-0_1.42.4-8~deb10u1_arm64.deb",
+      "sha256": "dc0d9181fcbee75b7dc9156fa702498a9528a1f6b677afef72fdc943e93e6c56",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/p/pango1.0/libpango-1.0-0_1.42.4-8~deb10u1_arm64.deb",
+        "https://snapshot.debian.org/file/23681d05698440ce7c0ed38a4e826e11b3f48c73"
+      ]
+    },
+    {
+      "file": "libpangocairo-1.0-0_1.42.4-8~deb10u1_arm64.deb",
+      "sha256": "bfcd0ee6765c87a5f564b43cf054aa90c7a772858d20b7e8943418f8ad31398b",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/p/pango1.0/libpangocairo-1.0-0_1.42.4-8~deb10u1_arm64.deb",
+        "https://snapshot.debian.org/file/29164bcdffa3d006f146665b2f12257a9e7a512a"
+      ]
+    },
+    {
+      "file": "libpangoft2-1.0-0_1.42.4-8~deb10u1_arm64.deb",
+      "sha256": "57b21d9aa4cfd8dd91d726419a02b228cb530701dff9ddd337e630cb85745c0e",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/p/pango1.0/libpangoft2-1.0-0_1.42.4-8~deb10u1_arm64.deb",
+        "https://snapshot.debian.org/file/35f86f0206fb2211a29a547c4d6fc2a7ca9408df"
+      ]
+    },
+    {
+      "file": "libpcre3_8.39-12_arm64.deb",
+      "sha256": "cf959aa722666827ec498a255ec14d20dd4ec3859446bb33de5332417588ff9f",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/p/pcre3/libpcre3_8.39-12_arm64.deb",
+        "https://snapshot.debian.org/file/701c202b58f34c8e3ef4af241978a803ce0e6a42"
+      ]
+    },
+    {
+      "file": "libpixman-1-0_0.36.0-1_arm64.deb",
+      "sha256": "0f09507c9380d97c8a1118ac6e04db9280e3dc5140660d596610f12fc352c7b6",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/p/pixman/libpixman-1-0_0.36.0-1_arm64.deb",
+        "https://snapshot.debian.org/file/c85e0ce010a9c1acafaacbbf1d61558eb46b9430"
+      ]
+    },
+    {
+      "file": "libpng16-16_1.6.36-6_arm64.deb",
+      "sha256": "d54f3c1dbb124dac2374d3f67b6aa288c331cb4f352f9257f318fc9bddbd8698",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libp/libpng1.6/libpng16-16_1.6.36-6_arm64.deb",
+        "https://snapshot.debian.org/file/5489a66f8a1081a301681d364d78df3e8994c8de"
+      ]
+    },
+    {
+      "file": "libqt5concurrent5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+      "sha256": "3a1453824190b52520b689bdb2a1a7549d8c6240f1ea2f51f65cebc21a78fb3e",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/q/qtbase-opensource-src/libqt5concurrent5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+        "https://snapshot.debian.org/file/a171ecab1583071bc72d2d531f181df8d82fa07d"
+      ]
+    },
+    {
+      "file": "libqt5core5a_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+      "sha256": "a632133df13120f4dbc595ca4fe66f8819dabdbe234a1cc79e059d19f18beae4",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/q/qtbase-opensource-src/libqt5core5a_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+        "https://snapshot.debian.org/file/ea1c4af8fc87f3d4b36b28f1acdb4517c64c7d9c"
+      ]
+    },
+    {
+      "file": "libqt5dbus5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+      "sha256": "36e42e86a05ebc5cc77abedfe455fff280b7dea5fc42bcfa65f875eb1ed5f704",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/q/qtbase-opensource-src/libqt5dbus5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+        "https://snapshot.debian.org/file/1b326cd760fe48070a066937c466625a204b9697"
+      ]
+    },
+    {
+      "file": "libqt5gui5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+      "sha256": "f68a810d9a92dc04690cd19392b8abf82633464bdc92d3d658dc79c5bfa92277",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/q/qtbase-opensource-src/libqt5gui5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+        "https://snapshot.debian.org/file/424fefbc918b9491281aebe8d455e43d5e8890ec"
+      ]
+    },
+    {
+      "file": "libqt5network5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+      "sha256": "9b9067e64da05f5ef9cd340a2d93fdb9eae2ad2c3e1eefb556a681bed447d904",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/q/qtbase-opensource-src/libqt5network5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+        "https://snapshot.debian.org/file/844884e023226700c9737b83a7b274a76a0af5b7"
+      ]
+    },
+    {
+      "file": "libqt5qml5_5.11.3-4_arm64.deb",
+      "sha256": "63a1079d702b15fc3ad1700a58755d9c98c185146874b0439ddfd6f6f2e52019",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/q/qtdeclarative-opensource-src/libqt5qml5_5.11.3-4_arm64.deb",
+        "https://snapshot.debian.org/file/5be709edfe1a4b35c1963f0a9e180c4f51ac78d9"
+      ]
+    },
+    {
+      "file": "libqt5quick5_5.11.3-4_arm64.deb",
+      "sha256": "36a12e0736f60c262cb84268a5fe7280b8f4bb3c94db9756a94a72e5b8e5bb7e",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/q/qtdeclarative-opensource-src/libqt5quick5_5.11.3-4_arm64.deb",
+        "https://snapshot.debian.org/file/0f5207dea682c8180a323965da2c2eceff4eb1a5"
+      ]
+    },
+    {
+      "file": "libqt5test5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+      "sha256": "0c3704b20249f196719325b56fdee4587249c339db0ae4cce11d2c2414d0b5ab",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/q/qtbase-opensource-src/libqt5test5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+        "https://snapshot.debian.org/file/aae204c92a5847a37e13b561a3a0a1fe1b92a6eb"
+      ]
+    },
+    {
+      "file": "libqt5widgets5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+      "sha256": "56aaa433a7584673a3688dbf84cfdd0006693d93d4d773b540d7431911996fce",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/q/qtbase-opensource-src/libqt5widgets5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+        "https://snapshot.debian.org/file/1101b4da41df367f3cd54ea15980526cfad35986"
+      ]
+    },
+    {
+      "file": "libqt5xml5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+      "sha256": "a832b96b536b9e686b71333685a3a82ee58d82b2a8ffbb48b413981d6a974e0b",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/q/qtbase-opensource-src/libqt5xml5_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+        "https://snapshot.debian.org/file/b4d3576260326ec7e666646dba888e7133a6a048"
+      ]
+    },
+    {
+      "file": "libselinux1_2.8-1+b1_arm64.deb",
+      "sha256": "95148ff53d7604e4f61f6a37c1d6768b3b55cd68a057b0cf8d14812f91bb7504",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libs/libselinux/libselinux1_2.8-1+b1_arm64.deb",
+        "https://snapshot.debian.org/file/418f31a5c007548e82a75ea9762977c80e2416dd"
+      ]
+    },
+    {
+      "file": "libstdc++6_8.3.0-6_arm64.deb",
+      "sha256": "52cf36333a405867a079a695f6a37cb63558859d7d19cef40fc7d112c39fefd6",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/g/gcc-8/libstdc++6_8.3.0-6_arm64.deb",
+        "https://snapshot.debian.org/file/355e3ddc982f8e8d3c95336f461591351e3ce66e"
+      ]
+    },
+    {
+      "file": "libthai-data_0.1.28-2_all.deb",
+      "sha256": "267d6b251f77c17fb1415ac0727675cb978c895cc1c77d7540e7133125614366",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libt/libthai/libthai-data_0.1.28-2_all.deb",
+        "https://snapshot.debian.org/file/f79794654239bad43fe83e2850413b63b5edf766"
+      ]
+    },
+    {
+      "file": "libthai0_0.1.28-2_arm64.deb",
+      "sha256": "985279d09a33e23d4e68a19b408b2133dfdfe5e122704f1b1cad923aa29b7c71",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libt/libthai/libthai0_0.1.28-2_arm64.deb",
+        "https://snapshot.debian.org/file/e3ca210b7f8d035c56a94e6e27cf30995f5c5716"
+      ]
+    },
+    {
+      "file": "libtiff5_4.1.0+git191117-2~deb10u4_arm64.deb",
+      "sha256": "988841cc1efa1ab27acaf01af8fe1b6931a12f91b94daa0fadfd189d093c4d87",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/t/tiff/libtiff5_4.1.0+git191117-2~deb10u4_arm64.deb",
+        "https://snapshot.debian.org/file/05cf5f02c3f310e630192f486ba261416ba0bce5"
+      ]
+    },
+    {
+      "file": "libuuid1_2.33.1-0.1_arm64.deb",
+      "sha256": "28d3a69bae1bdc9185e70d97214773a563a7f8a72682b2deef394a4f7c9c79b8",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/u/util-linux/libuuid1_2.33.1-0.1_arm64.deb",
+        "https://snapshot.debian.org/file/1aaf66a973ac2a841ea4c0e879133f84a108cd84"
+      ]
+    },
+    {
+      "file": "libwebp6_0.6.1-2+deb10u1_arm64.deb",
+      "sha256": "b702d578068465e201979d829d039160da02ca01566b87efdacff11a90023026",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libw/libwebp/libwebp6_0.6.1-2+deb10u1_arm64.deb",
+        "https://snapshot.debian.org/file/a1d2bfd52455b003c5c0395c5aab3a44cc49607a"
+      ]
+    },
+    {
+      "file": "libx11-6_1.6.7-1+deb10u2_arm64.deb",
+      "sha256": "a264c65fa5f52d7b35baa0938436d96f4db3dacdd263315525238e0ae838c6e5",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libx/libx11/libx11-6_1.6.7-1+deb10u2_arm64.deb",
+        "https://snapshot.debian.org/file/1f9357403a2201dbb110b33cbe403ff9e3cb8333"
+      ]
+    },
+    {
+      "file": "libx11-data_1.6.7-1+deb10u2_all.deb",
+      "sha256": "2c7473b87466a8eae640e44d80282a2c7474374858031fb1a1d499426b13dd75",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libx/libx11/libx11-data_1.6.7-1+deb10u2_all.deb",
+        "https://snapshot.debian.org/file/1e7d68f8f01a9180a0f6bc02c26bd039c5e2130e"
+      ]
+    },
+    {
+      "file": "libxau6_1.0.8-1+b2_arm64.deb",
+      "sha256": "8cd53255084f15705a998ee199d01b5b44568a53f01a0822919f6cccb56e6703",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libx/libxau/libxau6_1.0.8-1+b2_arm64.deb",
+        "https://snapshot.debian.org/file/f10ffe4e642e76d8da3d5b2dad1519f0c15473e2"
+      ]
+    },
+    {
+      "file": "libxcb-render0_1.13.1-2_arm64.deb",
+      "sha256": "136ba74bdfcb3898f7367405a5a98570b2c935cfd763b6eae7a3dea296d95bdf",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libx/libxcb/libxcb-render0_1.13.1-2_arm64.deb",
+        "https://snapshot.debian.org/file/ac375600b9701f939e296856cb4128ad3baa708e"
+      ]
+    },
+    {
+      "file": "libxcb-shm0_1.13.1-2_arm64.deb",
+      "sha256": "494b048da61222fd1583451389044e06124605d8fb07e1c05480245116f6d8b6",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libx/libxcb/libxcb-shm0_1.13.1-2_arm64.deb",
+        "https://snapshot.debian.org/file/3bc88712f46241f5cc4fe6f79b0930114b111223"
+      ]
+    },
+    {
+      "file": "libxcb1_1.13.1-2_arm64.deb",
+      "sha256": "3af53969325fb8613b9a01b5cb481efb017fd8c0a3d01ec1bc4b8e8f77732a54",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libx/libxcb/libxcb1_1.13.1-2_arm64.deb",
+        "https://snapshot.debian.org/file/50995b471233a4e3de93c6837fdfc615641b420f"
+      ]
+    },
+    {
+      "file": "libxdmcp6_1.1.2-3_arm64.deb",
+      "sha256": "e92569ac33247261aa09adfadc34ced3994ac301cf8b58de415a2d5dbf15ccfc",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libx/libxdmcp/libxdmcp6_1.1.2-3_arm64.deb",
+        "https://snapshot.debian.org/file/5b7aa017cb96f890b8b904ab44f65be37e507906"
+      ]
+    },
+    {
+      "file": "libxext6_1.3.3-1+b2_arm64.deb",
+      "sha256": "6e5ae8986e15f1c2b05bbea57da5a25f0649646dd002b1be0ac0301980afd7ec",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libx/libxext/libxext6_1.3.3-1+b2_arm64.deb",
+        "https://snapshot.debian.org/file/37bec08089ad9a9d2034212d584feaa74cd51ef5"
+      ]
+    },
+    {
+      "file": "libxrender1_0.9.10-1_arm64.deb",
+      "sha256": "fcae69900b599e7b31b31eafa203a184e00376ade1d2f74f9b3d7b24991573a0",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libx/libxrender/libxrender1_0.9.10-1_arm64.deb",
+        "https://snapshot.debian.org/file/c353eec8110f629d9ca989349dc0d8c1e46e8a66"
+      ]
+    },
+    {
+      "file": "libzstd1_1.3.8+dfsg-3+deb10u2_arm64.deb",
+      "sha256": "905a672d0226f9e23cb7c38d9f32e3382e6bf0493ec2d47a6e19fb1404e4874a",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/libz/libzstd/libzstd1_1.3.8+dfsg-3+deb10u2_arm64.deb",
+        "https://snapshot.debian.org/file/b8bf6f7a604c2cc3b3fd588118cdae2c8dc576e7"
+      ]
+    },
+    {
+      "file": "linux-libc-dev_4.19.249-2_arm64.deb",
+      "sha256": "e9a92d71d62655f673433c345a03fecaa4292f93c6572b28fd3d16dcfd1cc7f6",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/l/linux/linux-libc-dev_4.19.249-2_arm64.deb",
+        "https://snapshot.debian.org/file/0ab950ac432e8b689f653a73cfd148e0179083a8"
+      ]
+    },
+    {
+      "file": "qtbase5-dev-tools_5.11.3+dfsg1-1+deb10u5_amd64.deb",
+      "sha256": "899c07393144b157e962d43a8ea84d62332323b24b01fe357a1a84586490f5b4",
+      "target": "qt-host",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/q/qtbase-opensource-src/qtbase5-dev-tools_5.11.3+dfsg1-1+deb10u5_amd64.deb",
+        "https://snapshot.debian.org/file/b0a19c395a064fa1324861fc402d0db7e5aeda25"
+      ]
+    },
+    {
+      "file": "qtbase5-dev_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+      "sha256": "620b2ed5b0d08f13240cbb7d2519633dd080fdeb0001f158350d2f3b5394b48f",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/q/qtbase-opensource-src/qtbase5-dev_5.11.3+dfsg1-1+deb10u5_arm64.deb",
+        "https://snapshot.debian.org/file/955ea5748452764c8ae3fbb803227283f9966794"
+      ]
+    },
+    {
+      "file": "qtdeclarative5-dev_5.11.3-4_arm64.deb",
+      "sha256": "5169a6398df6dc90223888a0afcb6e390e6590a80fe694f3af2c42496ba45089",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/q/qtdeclarative-opensource-src/qtdeclarative5-dev_5.11.3-4_arm64.deb",
+        "https://snapshot.debian.org/file/ec9ae1c9f70cbb8e73da26175e0ba2f30d0de551"
+      ]
+    },
+    {
+      "file": "zlib1g_1.2.11.dfsg-1+deb10u1_arm64.deb",
+      "sha256": "efb684b7738ccbe3bce2a72c18f124224b1afe1d724011f21f2295b5afbf74b2",
+      "target": "sysroot",
+      "urls": [
+        "https://archive.debian.org/debian/pool/main/z/zlib/zlib1g_1.2.11.dfsg-1+deb10u1_arm64.deb",
+        "https://snapshot.debian.org/file/d81962f44341df8437d16d1f1ae37e4b8e3c8f6f"
+      ]
+    }
+  ]
+}

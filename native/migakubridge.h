@@ -19,6 +19,8 @@ public:
     QUrl endpoint() const { return m_endpoint; }
     void setEndpoint(const QUrl &url) { m_endpoint = url; }
     Q_INVOKABLE void analyze(QString text, int requestId);
+    Q_INVOKABLE void translate(QString text, int requestId);
+    Q_INVOKABLE void cancelTranslation();
     Q_INVOKABLE void ingest(QString payload, QString key);
     Q_INVOKABLE void watchJob(QString jobId, QString key);
     Q_INVOKABLE void markKnown(QString payload, int requestId);
@@ -26,6 +28,8 @@ public:
 signals:
     void analyzed(int requestId, QString response);
     void analysisFailed(int requestId);
+    void translated(int requestId, QString response);
+    void translationFailed(int requestId, QString explanation);
     void ingested(QString key, QString jobId, QString state);
     void ingestionFailed(QString key, QString explanation, bool retryable);
     void jobStatus(QString key, QString state, QString error);
@@ -37,6 +41,6 @@ private:
     QUrl m_endpoint;
     QByteArray m_token;
     QNetworkAccessManager m_network;
-    QPointer<QNetworkReply> m_analysis, m_ingestion, m_poll, m_known;
+    QPointer<QNetworkReply> m_analysis, m_translation, m_ingestion, m_poll, m_known;
     bool m_repeat = false;
 };

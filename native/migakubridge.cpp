@@ -23,6 +23,7 @@ bool MigakuBridge::eventFilter(QObject *, QEvent *event) {
 }
 MigakuBridge::~MigakuBridge() {
     cancelAnalysis();
+    cancelTranslation();
     if (m_ingestion) m_ingestion->abort();
     if (m_poll) m_poll->abort();
     if (m_known) m_known->abort();
@@ -39,6 +40,31 @@ QNetworkRequest MigakuBridge::request(QString route) const {
 void MigakuBridge::cancelAnalysis() {
     auto reply = m_analysis; m_analysis = nullptr;
     if (reply) { reply->abort(); reply->deleteLater(); }
+}
+void MigakuBridge::cancelTranslation() {
+    auto reply = m_translation; m_translation = nullptr;
+    if (reply) { reply->abort(); reply->deleteLater(); }
+}
+void MigakuBridge::translate(QString text, int requestId) {
+    cancelTranslation();
+    if (!configured()) {
+        emit translationFailed(requestId, QStringLiteral("Configure Migaku to translate scans.")); return;
+    }
+    QJsonObject input{{"language", "ja"}, {"text", text}};
+    auto reply = m_network.post(request("/text/translate"), QJsonDocument(input).toJson(QJsonDocument::Compact));
+    m_translation = reply;
+    QTimer::singleShot(30000, reply, [reply]() { if (reply->isRunning()) reply->abort(); });
+    connect(reply, &QNetworkReply::finished, this, [this, reply, requestId]() {
+        if (reply != m_translation) { reply->deleteLater(); return; }
+        m_translation = nullptr;
+        int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (reply->error() == QNetworkReply::NoError && status == 200)
+            emit translated(requestId, QString::fromUtf8(reply->readAll()));
+        else emit translationFailed(requestId, status == 401 ?
+            QStringLiteral("Migaku credentials need updating.") :
+            QStringLiteral("Translation unavailable. Tap to retry."));
+        reply->deleteLater();
+    });
 }
 void MigakuBridge::analyze(QString text, int requestId) {
     cancelAnalysis();

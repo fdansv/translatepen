@@ -8,6 +8,12 @@ The bridge checks the native code section and mapped entry instructions before c
 
 OCR responses carry request IDs. New scans and page exit reject or cancel older requests. Local SQLite lookup and Yomichan deinflection are independent of Migaku requests. JMnedict alternatives rank after ordinary JMdict definitions.
 
+Each scan initially shows the first local dictionary match. Once Migaku's validated word spans arrive, it selects the first `UNKNOWN` span in scan order and looks up that exact span, including inflections. An unknown without a local entry remains selected with a missing-definition message. With no unknowns or unavailable status, the initial local match remains. This automatic choice happens once per scan; tapping, volume navigation, choosing an alternative, span selection, marking known or pressing B takes precedence over a pending reply. Status refreshes never reset a later selection.
+
+After local lookup, the page requests a whole-scan translation from Migaku's `/text/translate` endpoint. It uses the account's translation language and custom translation prompt without creating a card. Translation has its own request ID and cancellation, and remains unchanged while navigating words. The scanned text shows one full line with scrolling; definitions and translations scroll separately. Routine navigation help occupies no footer space; operational messages appear only when needed.
+
+A small animated indicator beside the top-bar title appears during scanning, recognition, lookup, translation and vocabulary updates. Accepted Migaku card jobs keep it visible through generation and syncing, independently of word navigation or new scans. Completion, blocked jobs and failures stop their loading state; a saved offline request shows loading again when a retry actually starts.
+
 ## Migaku
 
 `native/migakubridge.cpp` reads the private pen configuration and calls the standalone [Migaku Local API](https://github.com/fdansv/migaku-api). It requests sentence analysis, known-word updates and sentence ingestion asynchronously. The local outbox stores a sentence/focus snapshot and a stable request ID for retries.

@@ -40,6 +40,10 @@ Item {
         id:migaku
         property bool bRepeat:false
         signal analyzed(int requestId,string response)
+        signal translated(int requestId,string response)
+        signal translationFailed(int requestId,string explanation)
+        function translate(text,id) {}
+        function cancelTranslation() {}
         signal analysisFailed(int requestId)
         signal ingested(string key,string jobId,string state)
         signal ingestionFailed(string key,string explanation,bool retryable)
@@ -75,6 +79,7 @@ Item {
                 {start:0,end:3,surface:'図書館',status:'KNOWN'}, {start:4,end:6,surface:'蛞蝓',status:'UNKNOWN'},
                 {start:0,end:2,surface:'wrong',status:'UNKNOWN'}]}));
             if (!check(page.unknownRanges.length===1 && page.unknownRanges[0].start===4,'unknown spans filtered')) return;
+            if (!check(page.current && page.current.surface==='蛞蝓','unknown word becomes default focus')) return;
             gbKey.foreKeyPress();
             if (!check(root.sent.length===0,'single B does not send')) return;
             second.start();
@@ -86,7 +91,7 @@ Item {
             gbKey.foreKeyPress();
             if (!check(root.sent.length===1,'double B sends once')) return;
             root.payload=JSON.parse(root.sent[0].payload);
-            if (!check(root.payload.focus_word==='図書館' && root.payload.focus_start===0 && root.payload.focus_end===3 &&
+            if (!check(root.payload.focus_word==='蛞蝓' && root.payload.focus_start===4 && root.payload.focus_end===6 &&
                 root.payload.sentence===page.sentence && Object.keys(root.payload).length===5,'minimal selected snapshot')) return;
             pair();
             if (!check(root.sent.length===1,'in-flight double press deduped')) return;

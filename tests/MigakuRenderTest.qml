@@ -3,7 +3,8 @@ import "../app"
 Rectangle {
     id:root
     width:800; height:480; color:'black'
-    Japanese { id:page; standalone:true }
+    MockMigaku { id:migaku; fixtureTranslation:'Yesterday I saw a slug at the library. Today I read some unfamiliar words.' }
+    Japanese { id:page; standalone:true; migakuBridge:migaku }
     Timer {
         interval:500; running:true
         onTriggered: {
@@ -16,7 +17,6 @@ Rectangle {
         onTriggered: {
             page.lookupAt(7);
             page.unknownRanges=[{start:7,end:9},{start:18,end:20}];
-            page.migakuNotice='Vol − / +: previous / next · B twice: Migaku';
             capture.start();
         }
     }

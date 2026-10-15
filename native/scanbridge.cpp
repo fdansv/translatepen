@@ -60,8 +60,17 @@ private:
 }
 
 ScanBridge::ScanBridge(QObject *parent) : QObject(parent) {
+    QFile file(QStringLiteral("/userdata/translatepen/ocr.json"));
+    if (file.open(QIODevice::ReadOnly)) {
+        const auto config = QJsonDocument::fromJson(file.readAll()).object();
+        const QUrl endpoint(config.value("endpoint").toString());
+        if (endpoint.isValid() && (endpoint.scheme() == "http" || endpoint.scheme() == "https")) {
+            m_endpoint = endpoint;
+            m_token = config.value("token").toString().toUtf8();
+        }
+    }
     m_timeout.setSingleShot(true);
-    m_timeout.setInterval(4000);
+    m_timeout.setInterval(10000);
     connect(&m_timeout, &QTimer::timeout, this, [this]() {
         m_timedOut = true;
         if (m_reply) m_reply->abort();
@@ -154,6 +163,7 @@ void ScanBridge::submit(const QByteArray &data, int requestId) {
     cancel();
     QNetworkRequest request(m_endpoint);
     request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("image/bmp"));
+    if (!m_token.isEmpty()) request.setRawHeader("Authorization", "Bearer " + m_token);
     // Do not follow an HTTP redirect to an unexpected server.
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
     auto reply = m_network.post(request, data);
@@ -171,6 +181,7 @@ void ScanBridge::submit(const QByteArray &data, int requestId) {
         auto result = document.object();
         if (reply->error() != QNetworkReply::NoError || status != 200) {
             QString message = m_timedOut ? QStringLiteral("Home OCR timed out. Check Wi-Fi and the server.") :
+                status == 401 ? QStringLiteral("OCR credentials need updating.") :
                 status == 429 ? QStringLiteral("Home OCR is busy. Please scan again.") :
                 status == 400 || status == 413 ? QStringLiteral("Could not read this scan. Try a shorter line.") :
                 QStringLiteral("Home OCR unavailable. Check Wi-Fi and the server.");

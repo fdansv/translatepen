@@ -17,7 +17,7 @@ Item {
     property int anchorPosition: -1
     property int previousLanguage: -1
     property string sentence: ""
-    property string notice: "Scan Japanese text to look up a word"
+    property string notice: ""
     property var matches: []
     property int matchIndex: 0
     property var current: matches.length ? matches[matchIndex] : null
@@ -28,8 +28,16 @@ Item {
     property int scanRequestId: 0
     property var scannerBridge: defaultScanner
     property var migakuBridge: defaultMigaku
+    property string translation: ""
+    property string translationNotice: ""
+    property string translationSentence: ""
+    property bool translating: false
+    property bool analyzing: false
+    property int translationRequestId: 0
     property var unknownRanges: []
     property var wordStatuses: []
+    property bool pendingUnknownFocus: false
+    property var unknownFocus: null
     property bool markingKnown: false
     property int knownRequestId: 0
     property var knownSnapshot: null
@@ -39,6 +47,10 @@ Item {
     property string lastMonitorKey: ""
     property var attentionMonitorAt: ({})
     property bool ingesting: false
+    property var creatingJobs: ({})
+    readonly property bool loading: scanning || recognizing || firstLookup.running ||
+        statusLookup.running || translationLookup.running || analyzing || translating ||
+        markingKnown || ingesting || Object.keys(creatingJobs).length>0
     property double firstBAt: 0
     property int bScanId: -1
     property string bFocus: ""
@@ -65,7 +77,8 @@ Item {
     }
     Component.onDestruction: {
         scannerBridge.cancel();
-        migakuBridge.cancelAnalysis();
+        clearAnalysis();
+        clearTranslation();
         if (!standalone) {
             commonCenter.setScanread(false);
             if (previousLanguage >= 0) commonCenter.setOcrlanid(previousLanguage);
@@ -75,8 +88,10 @@ Item {
     function goBack() {
         if (scanning) return;
         scanRequestId++;
+        pendingUnknownFocus=false;
         scannerBridge.cancel();
-        migakuBridge.cancelAnalysis();
+        clearAnalysis();
+        clearTranslation();
         resetB();
         if (standalone) { backRequested(); return; }
         commonCenter.stopAllaudioplay();
@@ -89,16 +104,18 @@ Item {
         recognizing = false;
         Lookup.recordEvent('ocr-ready', {releaseToOcrMs:releasedAt ? resultAt-releasedAt : null, characters:text.length});
         firstLookup.stop();
-        statusLookup.stop();
+        clearAnalysis();
+        clearTranslation();
         resetB();
         unknownRanges=[]; wordStatuses=[]; migakuNotice=''; activeIngestionKey='';
         sentence = text.trim();
+        pendingUnknownFocus=!!sentence; unknownFocus=null;
         matches=[]; wordCache=({});
         selecting = false; anchorPosition = -1;
         sourceText.text = sentence;
         sourceScroll.contentY = 0;
         if (!sentence) { matches=[]; notice='No text recognized. Please scan again.'; return; }
-        notice='Looking up the first word…';
+        notice='Looking up scanned text…';
         awaitingSentenceFrame=true;
         // Give Qt a frame to display the recognized sentence before doing SQL.
         firstLookup.start();
@@ -134,7 +151,29 @@ Item {
             }
         }
     }
-    function navigationNotice() { return 'Vol − / +: previous / next · B twice: Migaku'; }
+    function navigationNotice() { return ''; }
+    function clearAnalysis() {
+        statusLookup.stop();
+        analyzing=false;
+        migakuBridge.cancelAnalysis();
+    }
+    function clearTranslation() {
+        translationLookup.stop();
+        translationRequestId++;
+        if (typeof migakuBridge.cancelTranslation==='function') migakuBridge.cancelTranslation();
+        translation=''; translationNotice=''; translationSentence=''; translating=false;
+    }
+    function translateSentence() {
+        if (!sentence || scanning || recognizing || translating) return;
+        translationSentence=sentence;
+        translationRequestId++;
+        translationNotice='Translating…'; translating=true;
+        migakuBridge.translate(sentence,translationRequestId);
+    }
+    function scheduleTranslation() {
+        if (sentence && !translation && !translating && !translationNotice && !translationLookup.running)
+            translationLookup.start();
+    }
     function resetB() { firstBAt=0; bScanId=-1; bFocus=''; }
     function focusIdentity() { return current ? sentence+'|'+current.start+'|'+current.end : ''; }
     function ingestionProblem(error) {
@@ -155,7 +194,8 @@ Item {
     }
     function markCurrentKnown() {
         if (!initialized || !current || currentKnown || markingKnown || scanning || recognizing || selecting || firstLookup.running) return;
-        resetB(); statusLookup.stop(); migakuBridge.cancelAnalysis();
+        pendingUnknownFocus=false;
+        resetB(); clearAnalysis();
         knownSnapshot={sentence:sentence,start:current.start,end:current.end,surface:current.surface,scanId:scanRequestId};
         markingKnown=true; knownRequestId++;
         migakuNotice='Marking '+current.surface+' as known…';
@@ -166,6 +206,7 @@ Item {
         if (migakuBridge.bRepeat || !initialized || !current || scanning || recognizing || selecting || firstLookup.running) {
             resetB(); return;
         }
+        pendingUnknownFocus=false;
         var now=Date.now(), identity=focusIdentity();
         if (firstBAt && now-firstBAt>=60 && now-firstBAt<=450 && bScanId===scanRequestId && bFocus===identity) {
             resetB();
@@ -190,6 +231,14 @@ Item {
             migakuBridge.ingest(row.payload,row.key);
         } catch(error) { ingesting=false; migakuNotice='Could not read Migaku queue'; }
     }
+    function updateCreatingJob(key,state) {
+        // Submission finishes before Migaku generates and syncs the card.
+        // Track each job independently of the currently selected word.
+        var jobs=Object.assign({},creatingJobs);
+        if (state==='queued' || state==='running' || state==='created') jobs[key]=true;
+        else delete jobs[key];
+        creatingJobs=jobs;
+    }
     Timer { interval:15000; running:page.initialized; repeat:true; onTriggered:page.flushOutbox() }
     Timer {
         interval:3000; running:page.initialized; repeat:true
@@ -208,12 +257,35 @@ Item {
     }
     Timer {
         id:statusLookup; interval:1
-        onTriggered: { if (!page.scanning && !page.recognizing) page.migakuBridge.analyze(page.sentence,page.scanRequestId); }
+        onTriggered: {
+            if (!page.scanning && !page.recognizing) {
+                page.analyzing=true;
+                page.migakuBridge.analyze(page.sentence,page.scanRequestId);
+            }
+        }
     }
+    Timer { id:translationLookup; interval:1; onTriggered:page.translateSentence() }
     Connections {
         target:page.migakuBridge
+        onTranslated: {
+            if (requestId!==page.translationRequestId || page.scanning || page.recognizing || !page.translating) return;
+            page.translating=false;
+            try {
+                var result=JSON.parse(response);
+                if (result.text!==page.sentence || page.translationSentence!==page.sentence ||
+                    typeof result.translation!=='string' || !result.translation.trim())
+                    throw new Error('Invalid translation');
+                page.translation=result.translation.trim(); page.translationNotice='';
+                translationScroll.contentY=0;
+            } catch(error) { page.translationNotice='Translation unavailable. Tap to retry.'; }
+        }
+        onTranslationFailed: {
+            if (requestId!==page.translationRequestId || page.scanning || page.recognizing || !page.translating) return;
+            page.translating=false; page.translationNotice=explanation;
+        }
         onAnalyzed: {
             if (requestId!==page.scanRequestId || page.scanning || page.recognizing || page.markingKnown) return;
+            page.analyzing=false;
             try {
                 var result=JSON.parse(response), ranges=[], statuses=[];
                 if (result.text!==page.sentence || !Array.isArray(result.spans)) return;
@@ -226,7 +298,9 @@ Item {
                     }
                 }
                 page.wordStatuses=statuses;
+                ranges.sort(function(a,b) { return a.start-b.start || a.end-b.end; });
                 page.unknownRanges=ranges;
+                page.prioritizeUnknown();
             } catch(error) { page.unknownRanges=[]; page.wordStatuses=[]; }
         }
         onMarkedKnown: {
@@ -254,20 +328,26 @@ Item {
             }
         }
         onAnalysisFailed: {
-            if (requestId===page.scanRequestId && !page.scanning && !page.recognizing && !page.activeIngestionKey)
-                page.migakuNotice='Migaku word status unavailable';
+            if (requestId===page.scanRequestId && !page.scanning && !page.recognizing) {
+                page.analyzing=false;
+                page.pendingUnknownFocus=false;
+                if (!page.activeIngestionKey) page.migakuNotice='Migaku word status unavailable';
+            }
         }
         onIngested: {
+            page.updateCreatingJob(key,state);
             page.ingesting=false;
-            Lookup.finishIngestion(key,'sent',jobId,'');
+            Lookup.finishIngestion(key,state==='synced' ? 'complete' : 'sent',jobId,'');
             if (key===page.activeIngestionKey) page.migakuNotice=state==='synced' ? 'Created in Migaku' : 'Sent to Migaku · filling card…';
         }
         onIngestionFailed: {
+            page.updateCreatingJob(key,'failed');
             page.ingesting=false;
             if (!retryable) Lookup.finishIngestion(key,'failed','',explanation);
             if (key===page.activeIngestionKey) page.migakuNotice=explanation;
         }
         onJobStatus: {
+            page.updateCreatingJob(key,state);
             if (state==='synced' || state==='failed' || state==='uncertain')
                 Lookup.finishIngestion(key,state==='synced' ? 'complete' : 'attention','',error);
             if (key===page.activeIngestionKey)
@@ -293,20 +373,42 @@ Item {
         selecting=false; anchorPosition=-1;
         notice=rows.length ? navigationNotice() : 'No dictionary match. Scan again or select a phrase.';
         selectCurrent();
+        scheduleTranslation();
+    }
+    function prioritizeUnknown() {
+        if (!pendingUnknownFocus || scanning || recognizing || selecting || firstLookup.running) return;
+        pendingUnknownFocus=false;
+        if (!unknownRanges.length) return;
+        var span=unknownRanges[0];
+        try {
+            // Keep Migaku's exact token span rather than matching a known
+            // compound or neighbouring word across the unknown word.
+            var rows=Lookup.lookup(sentence,span.start,span.start,span.end);
+            showMatches(rows);
+            if (!rows.length) {
+                unknownFocus=span;
+                selectSpan(span.start,span.end);
+                notice='No local dictionary match for '+span.surface;
+            }
+            Lookup.recordEvent('unknown-focus',{start:span.start,end:span.end,matches:rows.length});
+        } catch(error) { Lookup.recordEvent('unknown-focus-failed',{}); }
     }
     function firstWord() {
         if (!initialized || !sentence || scanning || recognizing) return;
+        firstLookup.stop();
         var began=Date.now();
         try { showMatches(findWord(0,sentence.length)); }
         catch(error) { matches=[]; notice='Lookup failed: '+error; }
         Lookup.recordEvent('first-word', {lookupMs:Date.now()-began, matches:matches.length});
         // Status lookup starts only after the local definition is available.
         statusLookup.start();
+        scheduleTranslation();
     }
     function nextWord() {
         if (!initialized || !sentence || scanning || recognizing) return;
+        pendingUnknownFocus=false;
         firstLookup.stop();
-        var began=Date.now(), start=current ? current.end : 0;
+        var began=Date.now(), start=current ? current.end : unknownFocus ? unknownFocus.end : 0;
         try {
             var rows=findWord(start,sentence.length);
             if (!rows.length && start>0) rows=findWord(0,start);
@@ -328,8 +430,9 @@ Item {
     }
     function previousWord() {
         if (!initialized || !sentence || scanning || recognizing) return;
+        pendingUnknownFocus=false;
         firstLookup.stop();
-        var began=Date.now(), limit=current ? current.start : sentence.length;
+        var began=Date.now(), limit=current ? current.start : unknownFocus ? unknownFocus.start : sentence.length;
         try {
             var rows=lastWordBefore(limit);
             if (!rows.length && limit<sentence.length) rows=lastWordBefore(sentence.length);
@@ -339,6 +442,7 @@ Item {
     }
     function lookupAt(position, start, end) {
         if (!initialized || !sentence) return;
+        pendingUnknownFocus=false;
         firstLookup.stop();
         var began = Date.now();
         try {
@@ -349,21 +453,25 @@ Item {
             console.log('TRANSLATEPEN_LOOKUP matches=' + matches.length + ' ms=' + (Date.now()-began));
             Lookup.recordEvent('touch-lookup', {lookupMs:Date.now()-began, matches:matches.length});
         } catch(error) { notice='Lookup failed: ' + error; matches=[]; }
+        scheduleTranslation();
     }
     function selectCurrent() {
         resetB();
+        unknownFocus=null;
         activeIngestionKey=''; migakuNotice='';
-        if (current) {
-            sourceText.select(current.start,current.end);
-            var rectangle=sourceText.positionToRectangle(current.start);
-            if (rectangle.y<sourceScroll.contentY) sourceScroll.contentY=rectangle.y;
-            else if (rectangle.y+rectangle.height>sourceScroll.contentY+sourceScroll.height)
-                sourceScroll.contentY=Math.max(0,Math.min(sourceScroll.contentHeight-sourceScroll.height,rectangle.y+rectangle.height-sourceScroll.height));
-        }
+        if (current) selectSpan(current.start,current.end);
         else sourceText.deselect();
         definitionScroll.contentY=0;
     }
+    function selectSpan(start,end) {
+        sourceText.select(start,end);
+        var rectangle=sourceText.positionToRectangle(start);
+        if (rectangle.y<sourceScroll.contentY) sourceScroll.contentY=rectangle.y;
+        else if (rectangle.y+rectangle.height>sourceScroll.contentY+sourceScroll.height)
+            sourceScroll.contentY=Math.max(0,Math.min(sourceScroll.contentHeight-sourceScroll.height,rectangle.y+rectangle.height-sourceScroll.height));
+    }
     function choosePosition(position) {
+        pendingUnknownFocus=false;
         position=Math.max(0,Math.min(position,sentence.length-1));
         if (selecting) {
             if (anchorPosition<0) { anchorPosition=position; notice='Tap the last character of the phrase'; sourceText.select(position,position+1); }
@@ -380,9 +488,10 @@ Item {
         target: page.standalone ? null : gbKey
         onScanKeyPress: {
             if (!page.scanning) {
+                page.pendingUnknownFocus=false;
                 firstLookup.stop();
-                statusLookup.stop();
-                page.migakuBridge.cancelAnalysis();
+                page.clearAnalysis();
+                page.clearTranslation();
                 page.resetB(); page.unknownRanges=[]; page.wordStatuses=[]; page.migakuNotice=''; page.activeIngestionKey='';
                 page.scanRequestId++;
                 page.recognizing=false;
@@ -419,9 +528,31 @@ Item {
             onClicked: page.goBack()
         }
         Text { x:72; y:6; text:'Migaku Pen'; color:'#edf7fa'; font.pixelSize:25; font.family:cjk.name }
+        Item {
+            id:loadingIndicator
+            objectName:'loadingIndicator'
+            x:292; y:11; width:22; height:22
+            visible:page.loading
+            Canvas {
+                anchors.fill:parent
+                onPaint: {
+                    var ctx=getContext('2d'); ctx.clearRect(0,0,width,height);
+                    ctx.lineWidth=2.5;
+                    ctx.strokeStyle='#45606b';
+                    ctx.beginPath(); ctx.arc(width/2,height/2,8.5,0,Math.PI*2); ctx.stroke();
+                    ctx.strokeStyle='#80e2bc'; ctx.lineCap='round';
+                    ctx.beginPath(); ctx.arc(width/2,height/2,8.5,-Math.PI/2,Math.PI); ctx.stroke();
+                }
+            }
+            RotationAnimator on rotation {
+                from:0; to:360; duration:900; loops:Animation.Infinite
+                running:loadingIndicator.visible
+            }
+        }
         FlatButton {
+            objectName:'selectButton'
             x:330; y:2; width:110; height:40; text:page.selecting ? 'Cancel' : 'Select'; font.pixelSize:20; font.family:cjk.name
-            onClicked: { page.selecting=!page.selecting; page.anchorPosition=-1; page.notice=page.selecting ? 'Tap the first character of the phrase' : 'Tap any word'; }
+            onClicked: { page.pendingUnknownFocus=false; page.selecting=!page.selecting; page.anchorPosition=-1; page.notice=page.selecting ? 'Tap the first character of the phrase' : 'Tap any word'; }
         }
         FlatButton {
             objectName:'markKnownButton'
@@ -432,16 +563,19 @@ Item {
         }
         FlatButton {
             x:608; y:2; width:180; height:40; text:page.matches.length ? (page.matchIndex+1)+' / '+page.matches.length+'  ›' : 'No matches'; font.pixelSize:20; enabled:page.matches.length>1; font.family:cjk.name
-            onClicked: { page.matchIndex=(page.matchIndex+1)%page.matches.length; page.selectCurrent(); }
+            onClicked: { page.pendingUnknownFocus=false; page.matchIndex=(page.matchIndex+1)%page.matches.length; page.selectCurrent(); }
         }
         Flickable {
             id: sourceScroll
-            x:14; y:49; width:772; height:66
+            objectName:'sourceScroll'
+            x:14; y:46; width:772
+            height:page.sentence ? sourceMetrics.height : 0
             contentHeight: Math.max(height,sourceText.height)
             clip:true
             TextEdit {
                 id:sourceText
-                width:parent.width; height:Math.max(64,implicitHeight)
+                objectName:'sourceText'
+                width:parent.width; height:Math.max(36,implicitHeight)
                 color:'#eaf6fa'; selectionColor:'#296f68'; selectedTextColor:'#ffffff'
                 font.pixelSize:28; font.family:cjk.name; wrapMode:TextEdit.Wrap; readOnly:true; selectByMouse:false; textFormat:TextEdit.PlainText
                 persistentSelection:true; cursorVisible:false
@@ -468,6 +602,7 @@ Item {
                     anchors.fill:parent
                     onClicked: page.choosePosition(sourceText.positionAt(mouse.x,mouse.y))
                     onPressAndHold: {
+                        page.pendingUnknownFocus=false;
                         page.selecting=true;
                         page.anchorPosition=Math.max(0,Math.min(sourceText.positionAt(mouse.x,mouse.y),page.sentence.length-1));
                         sourceText.select(page.anchorPosition,page.anchorPosition+1);
@@ -476,16 +611,17 @@ Item {
                 }
             }
         }
-        Rectangle { x:14; y:118; width:772; height:1; color:'#304652' }
         Flickable {
             id:definitionScroll
-            x:14; y:124; width:772; height:116; clip:true
+            objectName:'definitionScroll'
+            x:14; y:sourceScroll.y+sourceScroll.height+2; width:772
+            height:translationScroll.y-y-4; clip:true
             contentHeight:definitionColumn.height
             Column {
                 id:definitionColumn; width:parent.width; spacing:3
                 Text {
                     width:parent.width; color:'#80e2bc'; font.pixelSize:28; font.family:cjk.name; font.bold:true; wrapMode:Text.Wrap
-                    text:page.current ? page.current.headword + (page.current.headword!==page.current.reading ? '  【'+page.current.reading+'】' : '') : '日本語'
+                    text:page.current ? page.current.headword + (page.current.headword!==page.current.reading ? '  【'+page.current.reading+'】' : '') : page.unknownFocus ? page.unknownFocus.surface : '日本語'
                 }
                 Text {
                     width:parent.width; color:'#9dbcca'; font.pixelSize:18; font.family:cjk.name; wrapMode:Text.Wrap
@@ -494,7 +630,7 @@ Item {
                 }
                 Text {
                     width:parent.width; color:'#edf4f8'; font.pixelSize:22; font.family:cjk.name; wrapMode:Text.Wrap; textFormat:Text.PlainText
-                    text:page.current ? page.current.gloss : 'Scan a word or sentence, then tap a word for its reading and meaning.'
+                    text:page.current ? page.current.gloss : page.unknownFocus ? 'No local dictionary match.' : 'Scan a word or sentence, then tap a word for its reading and meaning.'
                 }
                 Text {
                     visible:!!page.current
@@ -503,6 +639,40 @@ Item {
                 }
             }
         }
-        Text { x:14; y:244; width:772; height:22; text:page.migakuNotice || page.notice; color:'#95afbe'; font.pixelSize:17; font.family:cjk.name; elide:Text.ElideRight }
+        Flickable {
+            id:translationScroll
+            objectName:'translationScroll'
+            x:14; y:statusLine.y-height-4; width:772
+            height:visible ? Math.min(translationColumn.height,translationLabel.height+translationMetrics.lineSpacing*2+1) : 0
+            visible:!!page.sentence && !page.scanning && !page.recognizing
+            contentHeight:translationColumn.height; clip:true
+            Column {
+                id:translationColumn; width:parent.width; spacing:1
+                Text {
+                    id:translationLabel
+                    text:'Translation'; color:'#80e2bc'; font.pixelSize:14; font.family:cjk.name
+                }
+                Text {
+                    id:translationText
+                    objectName:'sentenceTranslation'
+                    width:parent.width; color:page.translation ? '#edf4f8' : '#95afbe'
+                    font.pixelSize:22; font.family:cjk.name; wrapMode:Text.Wrap; textFormat:Text.PlainText
+                    text:page.translation || page.translationNotice || 'Translating…'
+                    MouseArea {
+                        anchors.fill:parent
+                        enabled:!page.translating && !page.translation && !!page.translationNotice
+                        onClicked:page.translateSentence()
+                    }
+                }
+            }
+        }
+        FontMetrics { id:sourceMetrics; font:sourceText.font }
+        FontMetrics { id:translationMetrics; font:translationText.font }
+        Text {
+            id:statusLine
+            x:14; y:panel.height-height-4; width:772
+            height:text ? 22 : 0; visible:!!text
+            text:page.migakuNotice || page.notice; color:'#95afbe'; font.pixelSize:17; font.family:cjk.name; elide:Text.ElideRight
+        }
     }
 }

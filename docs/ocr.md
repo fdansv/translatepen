@@ -44,6 +44,8 @@ HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
 
 Replace `YOUR_SERVER_IP` with your private LAN address. The OCR endpoint has no authentication; keep it on a trusted LAN/private network. Check `http://YOUR_SERVER_IP:8193/health`, then configure the pen's `Native.ScanBridge.endpoint` to `http://YOUR_SERVER_IP:8193/ocr`.
 
+For Internet access, use the [bearer-authenticated gateway](remote-access.md) in front of OCR and Migaku.
+
 The example [systemd unit](../server/translatepen-ocr.service) assumes a checkout at `~/repos/translatepen`. Copy it into `~/.config/systemd/user/` and adjust its paths if needed. Put `TRANSLATEPEN_OCR_BIND=YOUR_SERVER_IP` in private `.runtime/ocr.env`; the unit otherwise binds to loopback. Install the Japanese dependencies/models before enabling this unit.
 
 ## Optional GPU assist

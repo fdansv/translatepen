@@ -4,25 +4,27 @@ Japanese dictionary lookup and optional Migaku integration for the **WorldPenSca
 
 ![Pen interface showing dictionary lookup and unknown-word underlines with a test sentence](docs/images/pen-ui.png)
 
-**Developer preview.** This works on the author's device running application **V2.2.83**. The native bridge and launcher patch require an exact executable checksum. Other firmware versions are unsupported. Installation is currently manual; a complete power-cycle and restore/reinstall sequence has not yet been validated.
+**Developer preview.** This works on the author's device running application **V2.2.83**. The native bridge and launcher patch require an exact executable checksum. Other firmware versions are unsupported. A guided install, toolchain bootstrap and native-only prebuilt previews are supplied; a physical power-cycle and restore/reinstall acceptance run remains unverified.
 
 ## What it does
 
 - Looks up compounds and conjugated forms using local JMdict data and Yomichan deinflection.
 - Provides offline JMnedict readings for names, places and stations, with alternative readings.
 - Offers taps, manual span selection and volume-key navigation.
-- Sends scans to a Japanese OCR service on your computer or home server. OCR needs a working LAN connection; dictionary lookup is local.
+- Defaults to the first word Migaku marks unknown in each scan. Local lookup appears immediately; if word status is unavailable or all words are known, the first local match stays selected. Manual selection takes precedence over a late status reply.
+- Sends scans to a Japanese OCR service on your computer or home server. Use a LAN connection or the [authenticated Cloudflare gateway](docs/remote-access.md); dictionary lookup is local.
 - With [Migaku Local API](https://github.com/fdansv/migaku-api), underlines unknown words, marks words known, and queues sentence cards without blocking dictionary lookup.
+- Translates the full scanned text below the definition using Migaku's configured translation language. Translation loads after local lookup; word navigation keeps the same translation.
 
 Migaku features require your own account and an authenticated Migaku extension running on the API host. Migaku synchronization and AI enrichment use Migaku's online services. Local OCR needs no internet after model download.
 
 ## Start here
 
-1. Read the [combined setup guide](docs/setup.md), including firmware and SSH prerequisites.
+1. Read the [combined setup guide](docs/setup.md) and [root SSH access notes](docs/ssh-access.md) before buying or changing a pen.
 2. Set up [dictionary data and server OCR](docs/ocr.md).
 3. Review [development and testing](docs/development.md) before building or changing the native plugin.
 
-This source release contains the app, native bridge, patcher, dictionary builders, CPU OCR and optional GPU corroborator. It does **not** contain PenPower firmware, extracted vendor resources, account sessions, model weights or compiled installation bundles.
+This source release contains the app, native bridge, patcher, dictionary builders, CPU OCR and optional GPU corroborator. [Releases](https://github.com/fdansv/translatepen/releases) provide our native plugin separately. Vendor firmware/resources, account sessions, model weights and private installation bundles are excluded. The [reproducibility checklist](docs/reproducibility.md) distinguishes host checks from physical-device checks.
 
 ## Controls
 
@@ -53,7 +55,7 @@ The plugin runs inside the existing Qt application. The launcher patch adds the 
 
 The existing device has passed physical scan checks, dictionary/navigation checks and Migaku integration checks. Those results describe one MSE09 and the author's server; they are not a multi-device compatibility claim. OCR still makes mistakes, particularly with furigana, clipped scans and ambiguous glyphs. Battery impact and broad font/layout coverage have not been established.
 
-The CPU OCR pipeline is the baseline. An optional GPU corroborator improved saved cases and a small number of fresh scans, but adds hardware/model requirements. See [OCR setup](docs/ocr.md). This release has no one-click installer or prebuilt native plugin; the complete toolchain bootstrap is still a packaging task.
+The CPU OCR pipeline is the baseline. An optional GPU corroborator improved saved cases and a small number of fresh scans, but adds hardware/model requirements. See [OCR setup](docs/ocr.md). Start with the documented native Linux/LAN route; GPU model conversion and hardware-specific setup remain manual.
 
 ## Contributing
 

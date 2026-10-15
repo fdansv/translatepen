@@ -1,0 +1,18 @@
+[Unit]
+Description=Authenticated TranslatePen Cloudflare origin
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/repos/translatepen
+EnvironmentFile=%h/repos/migaku-api/.runtime/service.env
+EnvironmentFile=%h/repos/translatepen/.runtime/gateway.env
+ExecStart=/usr/bin/python3 scripts/pen_gateway.py
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

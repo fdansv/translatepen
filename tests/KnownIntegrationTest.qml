@@ -8,6 +8,10 @@ Item {
         id:migaku
         property bool bRepeat:false
         signal analyzed(int requestId,string response)
+        signal translated(int requestId,string response)
+        signal translationFailed(int requestId,string explanation)
+        function translate(text,id) {}
+        function cancelTranslation() {}
         signal analysisFailed(int requestId)
         signal ingested(string key,string jobId,string state)
         signal ingestionFailed(string key,string explanation,bool retryable)
@@ -43,6 +47,8 @@ Item {
         onTriggered: {
             migaku.analyzed(page.scanRequestId,JSON.stringify({text:page.sentence,spans:[
                 {start:0,end:3,surface:'図書館',status:'KNOWN'},{start:4,end:6,surface:'蛞蝓',status:'UNKNOWN'}]}));
+            if (!check(page.current && page.current.surface==='蛞蝓','unknown word is initially selected')) return;
+            page.lookupAt(0);
             var button=findButton(page);
             if (!check(button && button.text==='Known ✓' && !button.enabled,'known button state')) return;
             button.clicked();

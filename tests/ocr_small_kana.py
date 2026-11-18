@@ -7,10 +7,50 @@ import unittest
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from ocr_server import Recognizer, recover_small_kana
+from ocr_server import Recognizer, recover_small_kana, recover_window_kana
 
 
 class SmallKanaTests(unittest.TestCase):
+    def test_window_recovers_small_kana_and_mark_without_replacing_context(self):
+        self.assertEqual(recover_window_kana('ギンブラってのは、駅の近くに今朝いた人だよ」',
+                                              'ギャンブラーってのは'),
+                         'ギャンブラーってのは、駅の近くに今朝いた人だよ」')
+        self.assertEqual(recover_window_kana('彼はギヤンブラって言う', 'ギャンブラーって'),
+                         '彼はギャンブラーって言う')
+
+    def test_window_requires_unique_coverage_and_does_not_change_kanji(self):
+        for original, candidate in [
+                ('ギンブラって言う', 'ギャングラーって言う'),
+                ('腕節で勝てると思う', '晩っ節で勝てると思う'),
+                ('あた', 'あった'),
+                ('ギンブラってギンブラって', 'ギャンブラーって'),
+                ('別の文を読んでいる', 'ギャンブラーってのは')]:
+            self.assertEqual(recover_window_kana(original, candidate), original)
+
+    def test_window_preserves_punctuation_and_already_present_marks(self):
+        for original, candidate in [('カレ、を食べる', 'カレーを食べる'),
+                                    ('ギャンブラーっていう', 'ギャンブラーっていう'),
+                                    ('彼は、カレーを食べた', 'カレーーを食べた')]:
+            self.assertEqual(recover_window_kana(original, candidate), original)
+
+    def test_pipeline_accepts_window_evidence_without_full_line_replacement(self):
+        class Completed:
+            def submit(self, *args):
+                future = Future()
+                future.set_result((['ギャンブラーってのは', '別の誤った文'], 20.))
+                return future
+        image = io.BytesIO()
+        Image.new('RGB', (473, 36), 'white').save(image, format='BMP')
+        recognizer = object.__new__(Recognizer)
+        recognizer.recognize_image = lambda image: ('ギンブラってのは隣の町で会った人だよ', .84, 0.)
+        recognizer.japanese_executor = Completed()
+        result = recognizer.recognize(image.getvalue())
+        self.assertEqual(result['text'], 'ギャンブラーってのは隣の町で会った人だよ')
+        self.assertEqual(result['japanese_window_count'], 2)
+        self.assertTrue(result['small_kana_recovery'])
+        self.assertTrue(result['prolonged_mark_recovery'])
+        self.assertFalse(result['japanese_line_recovery'])
+
     def test_recovers_supported_insertion_and_preserves_first_pass(self):
         self.assertEqual(
             recover_small_kana('「どうや、腕節で勝てると思うか」', 'どうや、腕っ節勝てると思うか'),

@@ -67,6 +67,18 @@ Run one OCR frontend on port 8193: stop the standalone CPU frontend before start
 
 ## Data handling and limits
 
+PP-OCR can recover a missing long-vowel mark (ー) when a short horizontal stroke
+in the scan lines up with the model's next-best prediction after katakana. A
+confident but unusually short transcription can also be retried using the
+existing edge crops. A replacement must retain the original Japanese characters
+in order and cover a plausible portion of the scan.
+
+With the optional Manga OCR check enabled, long strips use up to eight
+overlapping windows. A window can supply small kana and ー when it matches a
+unique span in the first reading. These additional checks can take longer on
+long lines. The automated regressions use synthetic images and mocked model
+output. They exercise these rules and rejection cases without downloading models.
+
 Images are processed in memory by default. Diagnostic capture is opt-in and can contain private reading material; keep captures outside public Git history. OCR can omit kana, confuse furigana or invent plausible characters. Dictionary agreement is a guard, not proof of what is printed.
 
 The guarded GPU revision passed all 17 saved sentence cases and 17 of 20 compound checks, plus four recorded fresh physical scans on the author's setup. These are small development samples, not a broad accuracy benchmark. The raw private reading captures are excluded from this source release.

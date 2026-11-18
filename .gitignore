@@ -47,6 +47,8 @@
 !/tests/names_dictionary_build.py
 !/tests/ocr_furigana_selection.py
 !/tests/ocr_small_kana.py
+!/tests/ocr_prolonged_marks.py
+!/tests/ocr_http.py
 !/tests/ocr_collapsed_line.py
 !/tests/gpu_ocr_assist.py
 !/tests/pen_gateway.py

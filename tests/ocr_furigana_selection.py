@@ -8,14 +8,14 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from ocr_server import Recognizer
+from ocr_server import Recognizer, credible_crop_recovery
 
 
 class CropSelectionTests(unittest.TestCase):
-    def recognize(self, outputs):
+    def recognize(self, outputs, width=100):
         # Both edges are sparse; the blank bottom margin is slightly sparser
         # than the small readings above the main line, as in the failed scan.
-        pixels = np.full((36, 100, 3), 255, dtype=np.uint8)
+        pixels = np.full((36, width, 3), 255, dtype=np.uint8)
         for y in range(36):
             pixels[y, 0] = y  # Identifies the crop without mocking PIL.
         pixels[11:28, 3::2] = 0
@@ -62,6 +62,25 @@ class CropSelectionTests(unittest.TestCase):
         })
         self.assertEqual(result["text"], "original")
         self.assertFalse(result["ruby_filter"])
+
+    def test_confident_tiny_fragment_can_recover_without_score_gain(self):
+        # The original probability covers only the two surviving letters.
+        result, calls = self.recognize({
+            (0, 36): ("鉄奥", .97),
+            (5, 36): ("ギャンブラの写真は鉄道資料館の奥にあります", .92),
+        }, width=581)
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(result['ruby_filter'])
+        self.assertIn('ギャンブラ', result['text'])
+
+    def test_crop_recovery_requires_coverage_confidence_and_anchors(self):
+        good = 'ギャンブラの写真は鉄道資料館の奥にあります'
+        self.assertTrue(credible_crop_recovery('鉄奥', good, .92, 581, 36))
+        for original, candidate, confidence in [
+                ('', good, .92), ('奥鉄', good, .92), ('鉄室', good, .92),
+                ('鉄奥', good, .87), ('鉄奥', '鉄と奥', .99),
+                ('鉄奥', good * 3, .99), (good, good + 'ですね', .99)]:
+            self.assertFalse(credible_crop_recovery(original, candidate, confidence, 581, 36))
 
 
 if __name__ == "__main__":

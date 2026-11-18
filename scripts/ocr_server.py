@@ -24,6 +24,73 @@ def japanese_letter(char):
     return '\u3041' <= char <= '\u30ff' or '\u3400' <= char <= '\u9fff'
 
 
+def prolonged_mark_steps(output, characters, image, padded_width):
+    """Corroborate a CTC blank with both a dash-shaped stroke and model evidence.
+
+    No extra inference. Only an isolated, internal horizontal ink component may
+    promote the strongest nonblank prediction, and that prediction must be ー
+    immediately after a recognized katakana. Other letters are untouched.
+    """
+    if 'ー' not in characters or image.height < 12:
+        return set()
+    gray = np.asarray(image.convert('L'))
+    paper = int(np.percentile(gray, 80, method='lower'))
+    mask = gray < min(160, paper - 60)
+    ink = np.flatnonzero(mask.sum(axis=0))
+    if not len(ink):
+        return set()
+    gaps = np.flatnonzero(np.diff(ink) >= 3)
+    starts, ends = np.r_[ink[0], ink[gaps + 1]], np.r_[ink[gaps] + 1, ink[-1] + 1]
+    indexes = output.argmax(axis=1)
+    selected = np.flatnonzero((indexes != 0) & np.r_[True, indexes[1:] != indexes[:-1]])
+    scale = padded_width / output.shape[0] * image.height / 48
+    dash = characters.index('ー')
+    recovered = set()
+    for start, end in zip(starts, ends):
+        ys, xs = np.nonzero(mask[:, start:end])
+        width, height = end - start, int(ys.max() - ys.min() + 1)
+        if start < 1 or end >= image.width - 1 or width < image.height * .25 or \
+                width > image.height or height > max(3, image.height * .24) or \
+                width < height * 2.5 or len(ys) < width * height * .3:
+            continue
+        choices = [t for t in range(len(indexes)) if start <= t * scale < end and
+                   indexes[t] == 0 and output[t, dash] >= .003 and
+                   output[t, 1:].argmax() + 1 == dash]
+        if not choices:
+            continue
+        step = max(choices, key=lambda t: output[t, dash])
+        before, after = selected[selected < step], selected[selected > step]
+        if not len(before):
+            continue
+        previous = int(before[-1])
+        if not 'ァ' <= characters[indexes[previous]] <= 'ヺ' or \
+                not image.height * .2 <= (step - previous) * scale <= image.height * 1.5:
+            continue
+        if len(after):
+            following = int(after[0])
+            if characters[indexes[following]] == 'ー' or \
+                    not image.height * .2 <= (following - step) * scale <= image.height * 1.5:
+                continue
+        recovered.add(step)
+    return recovered
+
+
+def credible_crop_recovery(original, candidate, confidence, width, height):
+    """A sparse-edge crop may recover a line despite a confident tiny fragment.
+
+    This is the same CTC reader on the same pixels, not the generative Japanese
+    checker. Require plausible coverage and every surviving letter in order.
+    """
+    old = ''.join(c for c in original if japanese_letter(c))
+    new = ''.join(c for c in candidate if japanese_letter(c))
+    aspect = width / height
+    if not old or len(old) >= aspect * .6 or confidence < .88 or \
+            len(new) < max(4, aspect * .8, len(old) * 2) or len(new) > aspect * 2.5:
+        return False
+    remaining = iter(new)
+    return all(any(c == anchor for c in remaining) for anchor in old)
+
+
 def recover_collapsed_line(original, candidate, width, height, confidence=1.0):
     """Recover lost kanji on short strips with agreement between recognitions."""
     original_letters = ''.join(c for c in original if japanese_letter(c))
@@ -104,6 +171,83 @@ def recover_small_kana(original, candidate, allow_small_substitutions=False):
     for position, remove, char in reversed(insertions):
         original = original[:position] + char + original[position + remove:]
     return original
+
+
+def recover_prolonged_marks(original, candidate):
+    """Use a second image read to restore only omitted katakana vowel marks.
+
+    Retain punctuation and every first-pass letter. A distant disagreement does
+    not invalidate a locally anchored insertion, but any changed immediate
+    neighbour does. No lexical completion or kanji substitution is performed.
+    """
+    positions = [i for i, char in enumerate(original) if japanese_letter(char)]
+    old = ''.join(original[i] for i in positions)
+    new = ''.join(char for char in candidate if japanese_letter(char))
+    if not old or 'ー' not in new or len(new) > len(old) + 8:
+        return original
+    operations = difflib.SequenceMatcher(None, old, new, autojunk=False).get_opcodes()
+    matched = sum(a2 - a1 for tag, a1, a2, b1, b2 in operations if tag == 'equal')
+    if matched < len(old) * 0.85 or matched < len(new.replace('ー', '')) * 0.85:
+        return original
+    mapping = {a1 + offset: b1 + offset
+               for tag, a1, a2, b1, b2 in operations if tag == 'equal'
+               for offset in range(a2 - a1)}
+    exact_word = all('ァ' <= char <= 'ヺ' for char in old) and new.replace('ー', '') == old.replace('ー', '')
+    insertions = []
+    for tag, a1, a2, b1, b2 in operations:
+        if tag != 'insert' or new[b1:b2] != 'ー' or a1 == 0:
+            continue
+        if not 'ァ' <= old[a1 - 1] <= 'ヺ':
+            continue
+        if old[a1 - 1:a1 + 1].find('ー') >= 0:
+            continue
+        left = min(2, a1)
+        right = min(2, len(old) - a1)
+        if left + right < 2:
+            continue
+        if any(mapping.get(a1 - offset) != b1 - offset for offset in range(1, left + 1)):
+            continue
+        if any(mapping.get(a1 + offset) != b2 + offset for offset in range(right)):
+            continue
+        # Do not bridge an actual space/punctuation gap in the scan result.
+        if a1 < len(old):
+            if positions[a1] != positions[a1 - 1] + 1:
+                continue
+        elif not exact_word:
+            continue
+        insertions.append(positions[a1 - 1] + 1)
+    for position in reversed(insertions):
+        original = original[:position] + 'ー' + original[position:]
+    return original
+
+
+def recover_window_kana(original, candidate):
+    """Corroborate only kana omissions inside a matching short image window.
+
+    Long columns lose detail when the Japanese checker scales the entire image
+    to its fixed input size. Align a bounded window to a unique, well-matched
+    first-pass span; keep all surrounding text and the existing insertion guards.
+    No kanji or ordinary-letter replacement is permitted.
+    """
+    positions = [i for i, c in enumerate(original) if japanese_letter(c)]
+    old = ''.join(original[i] for i in positions)
+    new = ''.join(c for c in candidate if japanese_letter(c))
+    matches = [m for m in difflib.SequenceMatcher(None, old, new, autojunk=False).get_matching_blocks() if m.size]
+    if not matches or sum(m.size for m in matches) < 4:
+        return original
+    first, last = matches[0], matches[-1]
+    start, end = first.a, last.a + last.size
+    span = old[start:end]
+    if old.count(span) != 1 or sum(m.size for m in matches) < len(span) * .85:
+        return original
+    # Trimming unsupported window edges must not conceal a changed letter
+    # immediately next to the insertion; the per-character guards check that.
+    candidate_span = new[first.b:last.b + last.size]
+    left, right = positions[start], positions[end - 1] + 1
+    fragment = original[left:right]
+    recovered = recover_small_kana(fragment, candidate_span, allow_small_substitutions=True)
+    recovered = recover_prolonged_marks(recovered, candidate_span)
+    return original[:left] + recovered + original[right:]
 
 
 def upright_glyph_strip(image):
@@ -236,7 +380,16 @@ class Recognizer:
         import torch
         start = time.perf_counter()
         with torch.inference_mode():
-            text = self.japanese(image.transpose(Image.Transpose.ROTATE_270))
+            if image.width / image.height > 8:
+                width, stride = image.height * 5, image.height * 3
+                starts = sorted({min(x, max(0, image.width - width))
+                                 for x in range(0, image.width, stride)})
+                if len(starts) > 8:
+                    starts = [starts[round(i * (len(starts) - 1) / 7)] for i in range(8)]
+                text = [self.japanese(image.crop((x, 0, min(x + width, image.width), image.height))
+                                      .transpose(Image.Transpose.ROTATE_270)) for x in starts]
+            else:
+                text = self.japanese(image.transpose(Image.Transpose.ROTATE_270))
         return text, (time.perf_counter() - start) * 1000
 
     def close(self):
@@ -258,6 +411,7 @@ class Recognizer:
         if getattr(self, 'japanese_executor', None) is not None and image.height >= 12:
             japanese_future = self.japanese_executor.submit(self.japanese_check, image)
         text, confidence, inference_time = self.recognize_image(image)
+        prolonged_mark_recovery = getattr(self, 'last_prolonged_mark_recovery', False)
         ruby_filter = False
         # Small ruby at the side of a vertical line becomes an edge band in the
         # native strip. A blank opposite margin can be even sparser. Try the
@@ -284,6 +438,9 @@ class Recognizer:
                         (0, 0, image.width, image.height - cut)
                     candidate, candidate_confidence, second_time = self.recognize_image(image.crop(bounds))
                     inference_time += second_time
+                    if credible_crop_recovery(text, candidate, candidate_confidence, image.width, image.height):
+                        candidates = [(candidate, candidate_confidence)]
+                        break  # Avoid a deeper crop and keep this retry bounded.
                     if candidate_confidence >= 0.85 and candidate_confidence > confidence + 0.05 and \
                             len(candidate) * candidate_confidence > len(text) * confidence * 1.2:
                         candidates.append((candidate, candidate_confidence))
@@ -318,10 +475,27 @@ class Recognizer:
         japanese_ms = japanese_wait = 0.0
         japanese_check_failed = False
         japanese_line_recovery = False
+        japanese_window_count = 0
         if japanese_future is not None:
             waiting = time.perf_counter()
             try:
                 candidate, japanese_ms = japanese_future.result()
+                if isinstance(candidate, list):
+                    japanese_window_count = len(candidate)
+                    for window in candidate:
+                        previous = text
+                        text = recover_window_kana(text, window)
+                        if text != previous:
+                            prolonged_mark_recovery |= text.count('ー') > previous.count('ー')
+                            small_added = any(text.count(c) != previous.count(c) for c in 'っゃゅょッャュョ')
+                            small_kana_recovery |= small_added
+                            if small_added:
+                                small_kana_source = 'japanese-window'
+                    candidate = text  # Full-line replacement cannot use window text.
+                recovered = recover_prolonged_marks(text, candidate)
+                if recovered != text:
+                    text = recovered
+                    prolonged_mark_recovery = True
                 recovered = recover_small_kana(text, candidate, allow_small_substitutions=True)
                 if recovered != text:
                     text = recovered
@@ -348,6 +522,8 @@ class Recognizer:
             "japanese_check_ms": round(japanese_ms, 1),
             "japanese_check_failed": japanese_check_failed,
             "japanese_line_recovery": japanese_line_recovery,
+            "japanese_window_count": japanese_window_count,
+            "prolonged_mark_recovery": prolonged_mark_recovery,
             "model": getattr(self, 'model_name', 'PP-OCRv5_server_rec'),
         }
 
@@ -367,7 +543,10 @@ class Recognizer:
             raise RuntimeError("model vocabulary and output size differ")
         indexes = output.argmax(axis=1)
         selected = (indexes != 0) & np.r_[True, indexes[1:] != indexes[:-1]]
-        text = "".join(self.characters[x] for x in indexes[selected])
+        recovered = prolonged_mark_steps(output, self.characters, image, max(320, width))
+        self.last_prolonged_mark_recovery = bool(recovered)
+        text = "".join('ー' if step in recovered else self.characters[indexes[step]]
+                       for step in range(len(indexes)) if selected[step] or step in recovered)
         confidence = float(output.max(axis=1)[selected].mean()) if selected.any() else 0.0
         return text, confidence, recognized - prepared
 
@@ -382,17 +561,18 @@ def serve(recognizer, bind, port, captures=None):
 
         def reply(self, status, body):
             data = json.dumps(body, ensure_ascii=False).encode("utf-8")
-            self.send_response(status)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Content-Length", str(len(data)))
-            self.send_header("Cache-Control", "no-store")
-            self.send_header("Connection", "close")
-            self.end_headers()
             try:
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Connection", "close")
+                self.end_headers()
                 self.wfile.write(data)
-            except (BrokenPipeError, ConnectionResetError):
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
                 pass  # The pen cancelled this scan while inference was running.
-            self.close_connection = True
+            finally:
+                self.close_connection = True
 
         def do_GET(self):
             if self.path != "/health":
@@ -421,6 +601,12 @@ def serve(recognizer, bind, port, captures=None):
                     self.reply(400, {"error": "incomplete image"})
                     return
                 result = recognizer.recognize(data)
+                # Timing only: never include book text or save images by default.
+                timing = {key: result.get(key) for key in (
+                    "server_ms", "inference_ms", "japanese_check_ms", "ruby_filter",
+                    "small_kana_recovery", "japanese_line_recovery", "prolonged_mark_recovery")}
+                timing["image_bytes"] = len(data)
+                print("OCR_TIMING " + json.dumps(timing), flush=True)
                 if captures is not None:
                     captures.save(data, result)
                 self.reply(200, result)

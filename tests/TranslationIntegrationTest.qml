@@ -41,6 +41,7 @@ Item {
         id:second; interval:300
         onTriggered: {
             try {
+                if (root.requests<2) { second.restart(); return; }
                 check(root.requests===2 && page.translating,'new scan starts new translation');
                 migaku.translated(root.firstRequest,JSON.stringify({text:'図書館で本を読みました。',translation:'old sentence'}));
                 check(!page.translation && page.translating,'previous scan cannot replace current translation');

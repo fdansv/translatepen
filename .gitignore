@@ -66,3 +66,13 @@
 !/vendor/deinflect.json
 **/__pycache__/
 **/*.pyc
+!/scripts/manga_capture.sh
+!/tests/CameraBridgeTest.qml
+!/tests/CameraCaptureCancelTest.qml
+!/tests/CameraFailureTest.qml
+!/tests/MangaModeTest.qml
+!/tests/MangaRenderTest.qml
+!/tests/PhotoUploadTest.qml
+!/tests/QueuePersistenceTest.qml
+!/tests/OfflineQueueTest.qml
+!/tests/OfflineQueueRenderTest.qml

@@ -92,6 +92,16 @@ class GatewayTest(unittest.TestCase):
         self.assertEqual(self.request("POST", "/ocr", b"BM", headers={"Content-Type": "image/bmp"})[0], 200)
         self.assertNotIn("Authorization", self.upstream.requests[-1][2])
 
+    def test_ingest_photo_envelope_is_bounded(self):
+        body = b'{"photo":{"data":"' + b'a' * 533336 + b'"}}'
+        self.assertEqual(self.request("POST", "/migaku/ingest", body,
+                                     headers={"Content-Type": "application/json"})[0], 200)
+        self.assertEqual(self.upstream.requests[-1][3], body)
+        count = len(self.upstream.requests)
+        self.assertEqual(self.request("POST", "/migaku/ingest",
+                                     headers={"Content-Length": "640001", "Content-Type": "application/json"})[0], 413)
+        self.assertEqual(len(self.upstream.requests), count)
+
     def test_all_pen_routes_and_job_uuid(self):
         for path in ("/migaku/text/analyze", "/migaku/text/translate", "/migaku/words/known"):
             self.assertEqual(self.request("POST", path, b"{}", headers={"Content-Type": "application/json"})[0], 200)

@@ -50,6 +50,7 @@ def stage(original, dictionary, native, output, ocr, migaku=None):
                          (ROOT / 'vendor/YOMICHAN-LICENSE', 'YOMICHAN-LICENSE'),
                          (ROOT / 'LICENSE', 'LICENSE'),
                          (ROOT / 'scripts/restore_pen.sh', 'restore_pen.sh'),
+                         (ROOT / 'scripts/manga_capture.sh', 'manga_capture.sh'),
                          (ROOT / 'scripts/install_pen.sh', 'install_pen.sh')]:
         shutil.copyfile(source, output / name)
     patch(original, output / 'scanpen')

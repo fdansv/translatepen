@@ -35,6 +35,14 @@ function initialize(directory) {
         tx.executeSql('CREATE TABLE IF NOT EXISTS saved(id INTEGER PRIMARY KEY, created TEXT, sentence TEXT, surface TEXT, headword TEXT, reading TEXT, gloss TEXT, start INTEGER, end INTEGER)');
         tx.executeSql('CREATE TABLE IF NOT EXISTS diagnostics(id INTEGER PRIMARY KEY, time INTEGER, event TEXT, details TEXT)');
         tx.executeSql('CREATE TABLE IF NOT EXISTS migaku_outbox(key TEXT PRIMARY KEY, payload TEXT UNIQUE, state TEXT, job TEXT, error TEXT)');
+        var outboxColumns=tx.executeSql('PRAGMA table_info(migaku_outbox)'), names={};
+        for (i=0;i<outboxColumns.rows.length;++i) names[outboxColumns.rows.item(i).name]=true;
+        if (!names.snapshot) tx.executeSql('ALTER TABLE migaku_outbox ADD COLUMN snapshot TEXT');
+        if (!names.created) tx.executeSql('ALTER TABLE migaku_outbox ADD COLUMN created INTEGER');
+        if (!names.photo) tx.executeSql('ALTER TABLE migaku_outbox ADD COLUMN photo TEXT');
+        if (!names.photo_done) tx.executeSql('ALTER TABLE migaku_outbox ADD COLUMN photo_done INTEGER');
+        tx.executeSql('CREATE TABLE IF NOT EXISTS app_settings(key TEXT PRIMARY KEY,value TEXT)');
+        tx.executeSql("UPDATE migaku_outbox SET error='Photo interrupted. Tap Retake photo.' WHERE state='photo' AND error IS NULL");
     });
     ready = true;
 }
@@ -129,7 +137,7 @@ function save(sentence, match) {
     });
 }
 
-function queueIngestion(payload) {
+function queueIngestion(payload, match, photoRequired) {
     var result;
     db.transaction(function(tx) {
         var rows=tx.executeSql('SELECT * FROM migaku_outbox WHERE payload=?',[payload]);
@@ -139,18 +147,47 @@ function queueIngestion(payload) {
                 tx.executeSql("UPDATE migaku_outbox SET state='pending',error=NULL WHERE key=?",[result.key]);
                 result.state='pending';
             }
+            if (!result.snapshot && match)
+                tx.executeSql('UPDATE migaku_outbox SET snapshot=? WHERE key=?',[JSON.stringify(match),result.key]);
         } else {
             var key='pen-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
-            tx.executeSql("INSERT INTO migaku_outbox(key,payload,state) VALUES(?,?,'pending')",[key,payload]);
-            result={key:key,payload:payload,state:'pending'};
+            var state=photoRequired ? 'photo' : 'pending';
+            tx.executeSql("INSERT INTO migaku_outbox(key,payload,state,snapshot,created) VALUES(?,?,?,?,?)",
+                          [key,payload,state,match ? JSON.stringify(match) : null,Date.now()]);
+            result={key:key,payload:payload,state:state};
         }
     });
     return result;
 }
-function pendingIngestion() {
+
+function queueSummary() {
+    var counts={pending:0,photo:0,sent:0,attention:0,failed:0,complete:0,total:0};
+    db.readTransaction(function(tx) {
+        var rows=tx.executeSql('SELECT state,count(*) AS n FROM migaku_outbox GROUP BY state');
+        for (var i=0;i<rows.rows.length;++i) {
+            var row=rows.rows.item(i); counts[row.state]=row.n;
+            if (row.state!=='complete') counts.total+=row.n;
+        }
+    });
+    return counts;
+}
+function queueEntries() {
+    var entries=[];
+    db.readTransaction(function(tx) {
+        var rows=tx.executeSql("SELECT * FROM migaku_outbox WHERE state!='complete' ORDER BY rowid LIMIT 100");
+        for (var i=0;i<rows.rows.length;++i) {
+            var row=rows.rows.item(i), input=JSON.parse(row.payload), saved=row.snapshot ? JSON.parse(row.snapshot) : {};
+            entries.push({key:row.key,word:input.focus_word,sentence:input.sentence,
+                         reading:saved.reading || '',gloss:saved.gloss || '',state:row.state,error:row.error || '',photo:row.photo || ''});
+        }
+    });
+    return entries;
+}
+function pendingIngestion(textOnly) {
     var result=null;
     db.readTransaction(function(tx) {
-        var rows=tx.executeSql("SELECT * FROM migaku_outbox WHERE state='pending' ORDER BY rowid LIMIT 1");
+        var rows=tx.executeSql("SELECT * FROM migaku_outbox WHERE state='pending'" +
+            (textOnly ? " AND photo IS NULL" : "") + " ORDER BY rowid LIMIT 1");
         if (rows.rows.length) result=rows.rows.item(0);
     });
     return result;
@@ -167,5 +204,29 @@ function sentIngestion(afterKey) {
 function finishIngestion(key, state, job, error) {
     db.transaction(function(tx) {
         tx.executeSql('UPDATE migaku_outbox SET state=?,job=COALESCE(?,job),error=? WHERE key=?',[state,job || null,error || null,key]);
+        if (state==='complete') tx.executeSql('UPDATE migaku_outbox SET photo_done=COALESCE(photo_done,?) WHERE key=? AND photo IS NOT NULL',[Date.now(),key]);
     });
 }
+function attachPhoto(key,path) {
+    db.transaction(function(tx) {tx.executeSql("UPDATE migaku_outbox SET photo=?,state='pending',error=NULL WHERE key=? AND state='photo' AND job IS NULL",[path,key]);});
+}
+function photoError(key,error) {
+    db.transaction(function(tx) {tx.executeSql("UPDATE migaku_outbox SET error=? WHERE key=? AND state='photo'",[error,key]);});
+}
+function waitingPhotos() {
+    var rows=[];
+    db.readTransaction(function(tx) {var found=tx.executeSql("SELECT key FROM migaku_outbox WHERE state='photo'");for (var i=0;i<found.rows.length;i++) rows.push(found.rows.item(i).key);});
+    return rows;
+}
+function expiredPhotos() {
+    var rows=[];
+    db.readTransaction(function(tx) {var found=tx.executeSql("SELECT key FROM migaku_outbox WHERE state='complete' AND photo IS NOT NULL AND photo_done<?",[Date.now()-7*86400000]);for (var i=0;i<found.rows.length;i++) rows.push(found.rows.item(i).key);});
+    return rows;
+}
+function forgetPhoto(key) {db.transaction(function(tx) {tx.executeSql("UPDATE migaku_outbox SET photo=NULL WHERE key=? AND state='complete'",[key]);});}
+function setting(key,fallback) {
+    var value=fallback;
+    db.readTransaction(function(tx) {var rows=tx.executeSql('SELECT value FROM app_settings WHERE key=?',[key]);if (rows.rows.length)value=rows.rows.item(0).value;});
+    return value;
+}
+function setSetting(key,value) {db.transaction(function(tx) {tx.executeSql('INSERT OR REPLACE INTO app_settings VALUES(?,?)',[key,value]);});}

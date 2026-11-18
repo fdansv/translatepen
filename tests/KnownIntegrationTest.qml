@@ -7,6 +7,8 @@ Item {
     QtObject {
         id:migaku
         property bool bRepeat:false
+        property bool online:true
+        function checkConnection() {}
         signal analyzed(int requestId,string response)
         signal translated(int requestId,string response)
         signal translationFailed(int requestId,string explanation)

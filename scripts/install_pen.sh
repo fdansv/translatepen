@@ -21,7 +21,7 @@ for item in app Native dictionary.sqlite deinflect.json scanpen ocr.json restore
     [ -e "$stage/$item" ] || { echo "Missing staging item: $item" >&2; exit 1; }
 done
 sha256sum -c SHA256SUMS
-for path in "$base" "$base/app" "$native" "$base/dictionary.sqlite" "$base/ocr.json" "$base/migaku.json"; do
+for path in "$base" "$base/app" "$native" "$base/dictionary.sqlite" "$base/ocr.json" "$base/migaku.json" "$base/bin" "$base/bin/manga_capture.sh"; do
     [ ! -L "$path" ] || { echo 'Refusing a symlink at an installation destination.' >&2; exit 1; }
 done
 if [ -e "$base/backups/scanpen.original" ]; then
@@ -37,6 +37,10 @@ for item in app dictionary.sqlite deinflect.json ocr.json migaku.json restore_pe
         set -- "$@" "userdata/translatepen/$item"
     fi
 done
+if [ -f "$base/bin/manga_capture.sh" ]; then
+    needed=$((needed + $(du -k "$base/bin/manga_capture.sh" | awk '{print $1}')))
+    set -- "$@" userdata/translatepen/bin/manga_capture.sh
+fi
 if [ -e "$native" ]; then
     needed=$((needed + $(du -sk "$native" | awk '{print $1}')))
     set -- "$@" usr/qml/TranslatePen/Native
@@ -75,6 +79,12 @@ for item in dictionary.sqlite deinflect.json ocr.json migaku.json restore_pen.sh
         mv "$base/$item.new.$$" "$base/$item"
     fi
 done
+if [ -f "$stage/manga_capture.sh" ]; then
+    mkdir -p "$base/bin"
+    cp "$stage/manga_capture.sh" "$base/bin/manga_capture.sh.new.$$"
+    chmod 755 "$base/bin/manga_capture.sh.new.$$"
+    mv "$base/bin/manga_capture.sh.new.$$" "$base/bin/manga_capture.sh"
+fi
 cp "$stage/scanpen" "$application.new.$$"
 chmod 755 "$application.new.$$"
 [ "$(hash "$application.new.$$")" = "$(hash "$stage/scanpen")" ]

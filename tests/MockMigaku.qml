@@ -1,6 +1,7 @@
 import QtQuick 2.12
 QtObject {
     property bool bRepeat:false
+    property bool online:true
     property string fixtureTranslation:''
     signal analyzed(int requestId,string response)
     signal analysisFailed(int requestId)
@@ -17,6 +18,7 @@ QtObject {
         if (fixtureTranslation) translated(id,JSON.stringify({text:text,translation:fixtureTranslation}));
     }
     function cancelTranslation() {}
+    function checkConnection() {}
     function ingest(payload,key) {}
     function watchJob(job,key) {}
     function markKnown(payload,id) {}

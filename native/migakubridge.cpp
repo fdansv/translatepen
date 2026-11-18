@@ -5,9 +5,15 @@
 #include <QNetworkRequest>
 #include <QCoreApplication>
 #include <QKeyEvent>
+#include <QFileInfo>
+#include <QCryptographicHash>
 
 MigakuBridge::MigakuBridge(QObject *parent) : QObject(parent) {
     QCoreApplication::instance()->installEventFilter(this);
+    m_probeTimer.setInterval(20000);
+    connect(&m_probeTimer, &QTimer::timeout, this, &MigakuBridge::checkConnection);
+    m_probeTimer.start();
+    QTimer::singleShot(0,this,&MigakuBridge::checkConnection);
     QFile file(QStringLiteral("/userdata/translatepen/migaku.json"));
     if (!file.open(QIODevice::ReadOnly)) return;
     const auto config = QJsonDocument::fromJson(file.readAll()).object();
@@ -22,11 +28,47 @@ bool MigakuBridge::eventFilter(QObject *, QEvent *event) {
     return false;
 }
 MigakuBridge::~MigakuBridge() {
+    if (m_probe) { m_probe->disconnect(this); m_probe->abort(); }
     cancelAnalysis();
     cancelTranslation();
     if (m_ingestion) m_ingestion->abort();
     if (m_poll) m_poll->abort();
     if (m_known) m_known->abort();
+}
+void MigakuBridge::setOnline(bool value) {
+    if (m_online==value) return;
+    m_online=value; emit onlineChanged();
+}
+void MigakuBridge::setPhotoSupported(bool value) {
+    if (m_photoSupported == value) return;
+    m_photoSupported = value;
+    emit photoSupportedChanged();
+}
+void MigakuBridge::setEndpoint(const QUrl &url) {
+    if (m_endpoint == url) return;
+    m_endpoint = url;
+    if (m_probe) m_probe->abort();
+    setOnline(false);
+    setPhotoSupported(false);
+}
+void MigakuBridge::checkConnection() {
+    if (m_probe) return;
+    if (!configured()) { setOnline(false); return; }
+    auto reply=m_network.get(request("/health"));
+    m_probe=reply;
+    QTimer::singleShot(2500,reply,[reply]() { if (reply->isRunning()) reply->abort(); });
+    connect(reply,&QNetworkReply::finished,this,[this,reply]() {
+        m_probe=nullptr;
+        auto result=QJsonDocument::fromJson(reply->readAll()).object();
+        const bool healthy = reply->error() == QNetworkReply::NoError &&
+            reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() == 200 &&
+            result.value("service").toString() == "ok";
+        if (healthy)
+            setPhotoSupported(result.value("card_destination").toString() == "anki" &&
+                              result.value("pen_photos").toBool());
+        setOnline(healthy);
+        reply->deleteLater();
+    });
 }
 QNetworkRequest MigakuBridge::request(QString route) const {
     auto url = m_endpoint;
@@ -84,6 +126,26 @@ void MigakuBridge::analyze(QString text, int requestId) {
     });
 }
 void MigakuBridge::ingest(QString payload, QString key) {
+    sendIngestion(payload,key);
+}
+void MigakuBridge::ingestPhoto(QString payload,QString key,QString path) {
+    QFileInfo info(path);
+    const auto directory=qEnvironmentVariable("TRANSLATEPEN_PHOTO_DIR","/mnt/sdcard/translatepen/photos");
+    if (info.isSymLink() || info.canonicalPath()!=QFileInfo(directory).canonicalFilePath() || info.fileName()!=key+".jpg" || info.size()>400000) {
+        emit ingestionFailed(key,"Photo file needs attention; saved on pen.",false);return;
+    }
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {emit ingestionFailed(key,"Saved photo is missing; request kept on pen.",false);return;}
+    const auto data=file.readAll();
+    if (!data.startsWith(QByteArray::fromHex("ffd8")) || !data.endsWith(QByteArray::fromHex("ffd9"))) {
+        emit ingestionFailed(key,"Saved photo is invalid; request kept on pen.",false);return;
+    }
+    auto input=QJsonDocument::fromJson(payload.toUtf8()).object();
+    input.insert("photo",QJsonObject{{"sha256",QString::fromLatin1(QCryptographicHash::hash(data,QCryptographicHash::Sha256).toHex())},
+                                   {"data",QString::fromLatin1(data.toBase64())}});
+    sendIngestion(QString::fromUtf8(QJsonDocument(input).toJson(QJsonDocument::Compact)),key);
+}
+void MigakuBridge::sendIngestion(QString payload, QString key) {
     if (m_ingestion) return;
     if (!configured()) {
         emit ingestionFailed(key, QStringLiteral("Migaku is not configured."), false); return;
@@ -101,9 +163,10 @@ void MigakuBridge::ingest(QString payload, QString key) {
             emit ingested(key, result.value("id").toString(), result.value("state").toString());
         else {
             bool retryable = status == 0 || status >= 500 || status == 429 || status == 408 || (status == 202);
+            if (status==0 || status>=500 || status==401) setOnline(false);
             emit ingestionFailed(key, status == 401 ? QStringLiteral("Migaku credentials need updating.") :
                 status == 409 ? QStringLiteral("Migaku request conflicts. Check the API.") :
-                retryable ? QStringLiteral("Saved for Migaku. Will retry when connected.") :
+                retryable ? QStringLiteral("Saved on pen. Will send when connected.") :
                 QStringLiteral("Migaku rejected this sentence. Check the API."), retryable);
         }
         reply->deleteLater();

@@ -102,6 +102,9 @@ bool ScanBridge::validCenter(QObject *center) {
 }
 
 bool ScanBridge::beginScan(QObject *center) {
+    const auto photos = qEnvironmentVariable("TRANSLATEPEN_PHOTO_DIR", "/mnt/sdcard/translatepen/photos");
+    if (QFile::exists(photos + "/.format-restore"))
+        return false;
     cancel();
     if (!validCenter(center)) return false;
     clearPending(center);

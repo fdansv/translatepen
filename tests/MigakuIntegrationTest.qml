@@ -7,6 +7,7 @@ Item {
     width:800; height:480
     property var sent:[]
     property int analyses:0
+    property bool lookupReadyAtAnalysis:false
     property var payload
     QtObject {
         id:gbKey
@@ -39,6 +40,8 @@ Item {
     QtObject {
         id:migaku
         property bool bRepeat:false
+        property bool online:true
+        function checkConnection() {}
         signal analyzed(int requestId,string response)
         signal translated(int requestId,string response)
         signal translationFailed(int requestId,string explanation)
@@ -51,7 +54,7 @@ Item {
         signal markedKnown(int requestId,string response)
         signal knownFailed(int requestId,string explanation)
         function markKnown(payload,id) {}
-        function analyze(sentence,id) { root.analyses++; }
+        function analyze(sentence,id) { root.lookupReadyAtAnalysis=Boolean(page.current && page.current.surface==='図書館'); root.analyses++; }
         function cancelAnalysis() {}
         function watchJob(job,key) {}
         function ingest(payload,key) { root.sent.push({payload:payload,key:key}); }
@@ -70,9 +73,11 @@ Item {
         onTriggered: { cleanup(); page.acceptScan('図書館、蛞蝓。TRANSLATEPEN_MIGAKU_TEST'); ready.start(); }
     }
     Timer {
-        id:ready; interval:300
+        id:ready; interval:50; repeat:true
         onTriggered: {
-            if (!check(page.current && page.current.surface==='図書館' && root.analyses===1,'dictionary precedes status request')) return;
+            if (!page.current || root.analyses===0) return;
+            ready.stop();
+            if (!check(page.current.surface==='図書館' && root.analyses===1 && root.lookupReadyAtAnalysis,'dictionary precedes status request')) return;
             migaku.analyzed(-1,JSON.stringify({text:page.sentence,spans:[{start:4,end:6,surface:'蛞蝓',status:'UNKNOWN'}]}));
             if (!check(page.unknownRanges.length===0,'stale status ignored')) return;
             migaku.analyzed(page.scanRequestId,JSON.stringify({text:page.sentence,spans:[
@@ -97,6 +102,8 @@ Item {
             if (!check(root.sent.length===1,'in-flight double press deduped')) return;
             var key=root.sent[0].key;
             migaku.ingestionFailed(key,'Will retry',true);
+            if (!check(page.retryAfter>Date.now(),'network failures back off')) return;
+            page.retryAfter=0;
             page.flushOutbox();
             if (!check(root.sent.length===2 && root.sent[1].key===key,'retry uses durable key')) return;
             migaku.ingested(key,'job-1','queued');
@@ -107,7 +114,7 @@ Item {
             if (!check(retained && retained.key===key && retained.state==='attention' && retained.job==='job-1' &&
                 retained.error==='ingestion_dictionary_empty' && page.migakuNotice.indexOf('no definition')>=0,'failed job retains details and remains observable')) return;
             migaku.jobStatus(key,'synced','');
-            if (!check(Lookup.sentIngestion('')===null && page.migakuNotice.indexOf('Created')===0,'recovered job completes without resubmission')) return;
+            if (!check(Lookup.sentIngestion('')===null && page.migakuNotice.indexOf('Added to Migaku')===0,'recovered job completes without resubmission')) return;
             gbKey.foreKeyPress(); gbKey.volumeUpKeyPress(); gbKey.foreKeyPress();
             if (!check(root.sent.length===2,'selection change disarms B')) return;
             page.resetB(); migaku.bRepeat=true; pair(); migaku.bRepeat=false;

@@ -45,7 +45,8 @@ def route(method, path):
         ("GET", "/migaku/health"): ("migaku", "/health", 0),
         ("POST", "/migaku/text/analyze"): ("migaku", "/text/analyze", 64_000),
         ("POST", "/migaku/text/translate"): ("migaku", "/text/translate", 16_000),
-        ("POST", "/migaku/ingest"): ("migaku", "/ingest", 64_000),
+        # A 400,000-byte JPEG expands to about 534 KB in the JSON envelope.
+        ("POST", "/migaku/ingest"): ("migaku", "/ingest", 640_000),
         ("POST", "/migaku/words/known"): ("migaku", "/words/known", 64_000),
     }
     if (method, path) in exact:

@@ -28,6 +28,8 @@ Item {
     property int scanRequestId: 0
     property var scannerBridge: defaultScanner
     property var migakuBridge: defaultMigaku
+    property var cameraBridge: defaultCamera
+    property bool mangaMode: false
     property string translation: ""
     property string translationNotice: ""
     property string translationSentence: ""
@@ -47,6 +49,13 @@ Item {
     property string lastMonitorKey: ""
     property var attentionMonitorAt: ({})
     property bool ingesting: false
+    property bool serverOnline: typeof migakuBridge.online!=='undefined' && migakuBridge.online
+    readonly property bool photoSupported: migakuBridge.photoSupported === true
+    readonly property string destinationName: photoSupported ? 'Anki' : 'Migaku'
+    property bool queueVisible: false
+    property var queueCounts: ({pending:0,sent:0,attention:0,failed:0,complete:0,total:0})
+    property var queueRows: []
+    property double retryAfter: 0
     property var creatingJobs: ({})
     readonly property bool loading: scanning || recognizing || firstLookup.running ||
         statusLookup.running || translationLookup.running || analyzing || translating ||
@@ -56,6 +65,7 @@ Item {
     property string bFocus: ""
     Native.ScanBridge { id: defaultScanner }
     Native.MigakuBridge { id: defaultMigaku }
+    Native.CameraBridge { id: defaultCamera }
     signal backRequested()
     FontLoader { id: cjk; source:'file:///oem/fonts/NotoSansCJK-Regular.ttc' }
 
@@ -63,6 +73,15 @@ Item {
         try {
             Lookup.initialize('/userdata/translatepen');
             initialized = true;
+            mangaMode=Lookup.setting('manga','0')==='1';
+            cameraBridge.recoverFlash();
+            var photos=Lookup.waitingPhotos();
+            for (var p=0;p<photos.length;p++) {
+                var path=cameraBridge.photoPath(photos[p]);
+                if (path) Lookup.attachPhoto(photos[p],path);
+            }
+            cleanPhotos();
+            refreshQueue();
         } catch (error) { notice = 'Dictionary could not open: ' + error; }
         if (!standalone) {
             previousLanguage = commonCenter.getOcrlanid();
@@ -76,6 +95,7 @@ Item {
         }
     }
     Component.onDestruction: {
+        cameraBridge.cancel();
         scannerBridge.cancel();
         clearAnalysis();
         clearTranslation();
@@ -86,6 +106,8 @@ Item {
         }
     }
     function goBack() {
+        if (cameraBridge.busy) { cameraBridge.cancel(); return; }
+        if (queueVisible) { queueVisible=false; return; }
         if (scanning) return;
         scanRequestId++;
         pendingUnknownFocus=false;
@@ -164,7 +186,8 @@ Item {
         translation=''; translationNotice=''; translationSentence=''; translating=false;
     }
     function translateSentence() {
-        if (!sentence || scanning || recognizing || translating) return;
+        if (!sentence || scanning || recognizing || translating ||
+            typeof migakuBridge.translate !== 'function') return;
         translationSentence=sentence;
         translationRequestId++;
         translationNotice='Translating…'; translating=true;
@@ -180,9 +203,12 @@ Item {
         if (error==='ingestion_dictionary_empty') return 'Migaku has no definition for this selection · request saved';
         if (error==='ingestion_ai_failed' || error==='ingestion_generation_failed') return 'Migaku AI could not fill the card · request saved';
         if (error==='ingestion_timeout') return 'Migaku AI took too long · request saved';
-        if (error==='deck_missing' || error==='ingestion_destination_missing') return 'Choose a Migaku deck · request saved';
+        if (error==='deck_missing' || error==='ingestion_destination_missing') return 'Check the '+destinationName+' deck · request saved';
+        if (error==='anki_unavailable') return 'Open Anki on the server · request saved';
+        if (error==='anki_duplicate_or_invalid') return 'Anki rejected a duplicate or invalid card · request saved';
+        if (error==='anki_field_mismatch') return 'Anki note fields need attention · request saved';
         if (error==='login_required') return 'Sign in to Migaku · request saved';
-        return 'Migaku needs attention · request saved';
+        return 'Card needs attention · request saved';
     }
     function isCurrentKnown() {
         if (!current) return false;
@@ -193,6 +219,7 @@ Item {
         return false;
     }
     function markCurrentKnown() {
+        if (!serverOnline) { migakuNotice='Mark known is available when connected'; return; }
         if (!initialized || !current || currentKnown || markingKnown || scanning || recognizing || selecting || firstLookup.running) return;
         pendingUnknownFocus=false;
         resetB(); clearAnalysis();
@@ -203,7 +230,7 @@ Item {
             focus_start:current.start,focus_end:current.end}),knownRequestId);
     }
     function pressB() {
-        if (migakuBridge.bRepeat || !initialized || !current || scanning || recognizing || selecting || firstLookup.running) {
+        if (cameraBridge.busy || queueVisible || migakuBridge.bRepeat || !initialized || !current || scanning || recognizing || selecting || firstLookup.running) {
             resetB(); return;
         }
         pendingUnknownFocus=false;
@@ -213,24 +240,66 @@ Item {
             try {
                 var payload=JSON.stringify({language:'ja',sentence:sentence,focus_word:current.surface,
                     focus_start:current.start,focus_end:current.end});
-                var row=Lookup.queueIngestion(payload);
+                var row=Lookup.queueIngestion(payload,{headword:current.headword,reading:current.reading,
+                    gloss:current.gloss,surface:current.surface,source:current.source},mangaMode && photoSupported);
+                refreshQueue();
                 activeIngestionKey=row.key;
-                migakuNotice=row.state==='complete' ? 'Created in Migaku' : row.state==='attention' ? ingestionProblem(row.error) :
-                    row.state==='sent' ? 'Sent to Migaku' : 'Saved for Migaku…';
-                if (row.state==='attention' && row.job) migakuBridge.watchJob(row.job,row.key);
+                if (row.state==='photo') { retakePhoto(row.key); return; }
+                migakuNotice=row.state==='complete' ? 'Added to '+destinationName : row.state==='attention' ? ingestionProblem(row.error) :
+                    row.state==='sent' ? 'Sent to '+destinationName : serverOnline ? 'Saved for '+destinationName+'…' : 'Saved on pen ✓ · sends automatically when connected';
+                if (serverOnline && row.state==='attention' && row.job) migakuBridge.watchJob(row.job,row.key);
                 flushOutbox();
-            } catch(error) { migakuNotice='Could not queue for Migaku: '+error; }
+            } catch(error) { migakuNotice='Could not queue card: '+error; }
         } else { firstBAt=now; bScanId=scanRequestId; bFocus=identity; }
     }
     function flushOutbox() {
-        if (!initialized || ingesting || scanning || recognizing || firstLookup.running) return;
+        if (cameraBridge.busy || !serverOnline || Date.now()<retryAfter || !initialized || ingesting || scanning || recognizing || firstLookup.running) return;
         try {
-            var row=Lookup.pendingIngestion();
+            var row=Lookup.pendingIngestion(!photoSupported);
             if (!row) return;
             ingesting=true;
-            migakuBridge.ingest(row.payload,row.key);
-        } catch(error) { ingesting=false; migakuNotice='Could not read Migaku queue'; }
+            if (row.photo) migakuBridge.ingestPhoto(row.payload,row.key,row.photo);
+            else migakuBridge.ingest(row.payload,row.key);
+        } catch(error) { ingesting=false; migakuNotice='Could not read card queue'; }
     }
+    function cleanPhotos() {
+        if (!initialized) return;
+        var expired=Lookup.expiredPhotos();
+        for (var i=0;i<expired.length;i++) if (cameraBridge.removePhoto(expired[i])) Lookup.forgetPhoto(expired[i]);
+    }
+    function retakePhoto(key) {
+        if (!photoSupported || cameraBridge.busy || scanning || recognizing) return;
+        queueVisible=false; resetB(); clearAnalysis();
+        cleanPhotos(); cameraBridge.capture(key);
+    }
+    Connections {
+        target:page.cameraBridge
+        onCaptured: {
+            Lookup.attachPhoto(key,path); page.refreshQueue();
+            page.migakuNotice=page.serverOnline ? 'Photo saved · sending to Anki…' : 'Word + photo saved on pen ✓';
+            outboxDrain.restart();
+        }
+        onFailed: {
+            Lookup.photoError(key,explanation); page.refreshQueue(); page.migakuNotice=explanation;
+        }
+    }
+    function refreshQueue() {
+        if (!initialized) return;
+        queueCounts=Lookup.queueSummary();
+        if (queueVisible) queueRows=Lookup.queueEntries();
+    }
+    function uploadQueue() {
+        retryAfter=0;
+        migakuBridge.checkConnection();
+        flushOutbox();
+        migakuNotice=serverOnline ? 'Uploading queued requests…' : 'Saved on pen · checking server connection…';
+    }
+    onQueueVisibleChanged: { resetB(); if (queueVisible) refreshQueue(); }
+    onServerOnlineChanged: {
+        if (serverOnline) { retryAfter=0; outboxDrain.restart(); if (sentence) statusLookup.restart(); }
+        else { clearAnalysis(); unknownRanges=[]; wordStatuses=[]; }
+    }
+    Timer { id:outboxDrain; interval:30; onTriggered:page.flushOutbox() }
     function updateCreatingJob(key,state) {
         // Submission finishes before Migaku generates and syncs the card.
         // Track each job independently of the currently selected word.
@@ -241,7 +310,7 @@ Item {
     }
     Timer { interval:15000; running:page.initialized; repeat:true; onTriggered:page.flushOutbox() }
     Timer {
-        interval:3000; running:page.initialized; repeat:true
+        interval:3000; running:page.initialized && page.serverOnline; repeat:true
         onTriggered: {
             if (page.scanning || page.recognizing || firstLookup.running) return;
             var row=Lookup.sentIngestion(page.lastMonitorKey);
@@ -258,7 +327,7 @@ Item {
     Timer {
         id:statusLookup; interval:1
         onTriggered: {
-            if (!page.scanning && !page.recognizing) {
+            if (page.serverOnline && !page.scanning && !page.recognizing) {
                 page.analyzing=true;
                 page.migakuBridge.analyze(page.sentence,page.scanRequestId);
             }
@@ -267,6 +336,7 @@ Item {
     Timer { id:translationLookup; interval:1; onTriggered:page.translateSentence() }
     Connections {
         target:page.migakuBridge
+        ignoreUnknownSignals:true
         onTranslated: {
             if (requestId!==page.translationRequestId || page.scanning || page.recognizing || !page.translating) return;
             page.translating=false;
@@ -284,8 +354,9 @@ Item {
             page.translating=false; page.translationNotice=explanation;
         }
         onAnalyzed: {
-            if (requestId!==page.scanRequestId || page.scanning || page.recognizing || page.markingKnown) return;
+            if (requestId!==page.scanRequestId || page.scanning || page.recognizing) return;
             page.analyzing=false;
+            if (page.markingKnown) return;
             try {
                 var result=JSON.parse(response), ranges=[], statuses=[];
                 if (result.text!==page.sentence || !Array.isArray(result.spans)) return;
@@ -338,22 +409,27 @@ Item {
             page.updateCreatingJob(key,state);
             page.ingesting=false;
             Lookup.finishIngestion(key,state==='synced' ? 'complete' : 'sent',jobId,'');
-            if (key===page.activeIngestionKey) page.migakuNotice=state==='synced' ? 'Created in Migaku' : 'Sent to Migaku · filling card…';
+            page.refreshQueue(); outboxDrain.restart();
+            if (key===page.activeIngestionKey) page.migakuNotice=state==='synced' ? 'Added to '+page.destinationName : 'Sent to '+page.destinationName+' · filling card…';
         }
         onIngestionFailed: {
             page.updateCreatingJob(key,'failed');
             page.ingesting=false;
             if (!retryable) Lookup.finishIngestion(key,'failed','',explanation);
+            else page.retryAfter=Date.now()+30000;
+            page.refreshQueue();
+            if (!retryable) outboxDrain.restart();
             if (key===page.activeIngestionKey) page.migakuNotice=explanation;
         }
         onJobStatus: {
             page.updateCreatingJob(key,state);
             if (state==='synced' || state==='failed' || state==='uncertain')
                 Lookup.finishIngestion(key,state==='synced' ? 'complete' : 'attention','',error);
+            page.refreshQueue();
             if (key===page.activeIngestionKey)
-                page.migakuNotice=state==='synced' ? 'Created in Migaku ✓' :
+                page.migakuNotice=state==='synced' ? 'Added to '+page.destinationName+' ✓' :
                     state==='blocked' || state==='failed' || state==='uncertain' ? page.ingestionProblem(error) :
-                    state==='created' ? 'Created in Migaku · syncing…' : 'Sent to Migaku · filling card…';
+                    state==='created' ? 'Checking '+page.destinationName+'…' : 'Sent to '+page.destinationName+' · filling card…';
         }
     }
     function findWord(first, limit) {
@@ -405,6 +481,7 @@ Item {
         scheduleTranslation();
     }
     function nextWord() {
+        if (cameraBridge.busy) return;
         if (!initialized || !sentence || scanning || recognizing) return;
         pendingUnknownFocus=false;
         firstLookup.stop();
@@ -429,6 +506,7 @@ Item {
         return previous;
     }
     function previousWord() {
+        if (cameraBridge.busy) return;
         if (!initialized || !sentence || scanning || recognizing) return;
         pendingUnknownFocus=false;
         firstLookup.stop();
@@ -450,6 +528,7 @@ Item {
             matchIndex = 0;
             selectCurrent();
             if (!matches.length) notice='No dictionary match here. Tap another word or select a phrase.';
+            else notice=navigationNotice();
             console.log('TRANSLATEPEN_LOOKUP matches=' + matches.length + ' ms=' + (Date.now()-began));
             Lookup.recordEvent('touch-lookup', {lookupMs:Date.now()-began, matches:matches.length});
         } catch(error) { notice='Lookup failed: ' + error; matches=[]; }
@@ -471,6 +550,7 @@ Item {
             sourceScroll.contentY=Math.max(0,Math.min(sourceScroll.contentHeight-sourceScroll.height,rectangle.y+rectangle.height-sourceScroll.height));
     }
     function choosePosition(position) {
+        if (cameraBridge.busy) return;
         pendingUnknownFocus=false;
         position=Math.max(0,Math.min(position,sentence.length-1));
         if (selecting) {
@@ -484,23 +564,28 @@ Item {
         } else { notice=navigationNotice(); lookupAt(position); }
     }
 
+    // Also called by the home launcher when this page opens during a scan-key
+    // press. Guard against that same signal reaching the new Connections too.
+    function startScan() {
+        if (cameraBridge.busy) return;
+        cameraBridge.recoverFlash();
+        page.queueVisible=false;
+        if (!page.scanning) {
+            firstLookup.stop();
+            firstLookup.stop(); clearAnalysis(); clearTranslation();
+            page.migakuBridge.cancelAnalysis();
+            page.resetB(); page.unknownRanges=[]; page.wordStatuses=[]; page.migakuNotice=''; page.activeIngestionKey='';
+            page.scanRequestId++;
+            page.recognizing=false;
+            page.releasedAt=0; page.awaitingSentenceFrame=false;
+            commonCenter.stopAllaudioplay();
+            page.scanning=page.scannerBridge.beginScan(commonCenter);
+            page.notice=page.scanning ? 'Scanning…' : 'Scanner unavailable. Reopen Anki Pen.';
+        }
+    }
     Connections {
         target: page.standalone ? null : gbKey
-        onScanKeyPress: {
-            if (!page.scanning) {
-                page.pendingUnknownFocus=false;
-                firstLookup.stop();
-                page.clearAnalysis();
-                page.clearTranslation();
-                page.resetB(); page.unknownRanges=[]; page.wordStatuses=[]; page.migakuNotice=''; page.activeIngestionKey='';
-                page.scanRequestId++;
-                page.recognizing=false;
-                page.releasedAt=0; page.awaitingSentenceFrame=false;
-                commonCenter.stopAllaudioplay();
-                page.scanning=page.scannerBridge.beginScan(commonCenter);
-                page.notice=page.scanning ? 'Scanning…' : 'Scanner unavailable. Reopen Migaku Pen.';
-            }
-        }
+        onScanKeyPress: page.startScan()
         onScanKeyRelease: {
             if (page.scanning) {
                 page.releasedAt=Date.now(); page.scanning=false; page.recognizing=true;
@@ -527,11 +612,23 @@ Item {
             contentItem: Text { text:parent.text; color:'white'; font:parent.font; horizontalAlignment:Text.AlignHCenter; verticalAlignment:Text.AlignVCenter }
             onClicked: page.goBack()
         }
-        Text { x:72; y:6; text:'Migaku Pen'; color:'#edf7fa'; font.pixelSize:25; font.family:cjk.name }
+        Text { x:72; y:6; text:page.destinationName+' Pen'; color:'#edf7fa'; font.pixelSize:25; font.family:cjk.name }
+        FlatButton {
+            objectName:'ankiQueueButton'
+            x:208; y:2; width:90; height:40; font.pixelSize:15; font.family:cjk.name
+            text:(page.serverOnline ? 'Online' : 'Offline')+'\nQueue '+page.queueCounts.total
+            onClicked:page.queueVisible=true
+        }
+        FlatButton {
+            objectName:'mangaModeButton'
+            visible:page.photoSupported
+            x:302; y:2; width:122; height:40; text:page.mangaMode ? 'Manga ON' : 'Manga OFF'; font.pixelSize:18; font.family:cjk.name
+            onClicked: {page.mangaMode=!page.mangaMode; Lookup.setSetting('manga',page.mangaMode ? '1' : '0'); page.resetB();}
+        }
         Item {
             id:loadingIndicator
             objectName:'loadingIndicator'
-            x:292; y:11; width:22; height:22
+            x:47; y:11; width:22; height:22
             visible:page.loading
             Canvas {
                 anchors.fill:parent
@@ -551,18 +648,18 @@ Item {
         }
         FlatButton {
             objectName:'selectButton'
-            x:330; y:2; width:110; height:40; text:page.selecting ? 'Cancel' : 'Select'; font.pixelSize:20; font.family:cjk.name
+            x:428; y:2; width:86; height:40; text:page.selecting ? 'Cancel' : 'Select'; font.pixelSize:20; font.family:cjk.name
             onClicked: { page.pendingUnknownFocus=false; page.selecting=!page.selecting; page.anchorPosition=-1; page.notice=page.selecting ? 'Tap the first character of the phrase' : 'Tap any word'; }
         }
         FlatButton {
             objectName:'markKnownButton'
-            x:452; y:2; width:144; height:40; text:page.markingKnown ? 'Marking…' : page.currentKnown ? 'Known ✓' : 'Mark known';
-            enabled:page.current!==null && !page.currentKnown && !page.markingKnown && !page.scanning && !page.recognizing && !page.selecting;
+            x:518; y:2; width:130; height:40; text:page.markingKnown ? 'Marking…' : page.currentKnown ? 'Known ✓' : 'Mark known';
+            enabled:page.serverOnline && page.current!==null && !page.currentKnown && !page.markingKnown && !page.scanning && !page.recognizing && !page.selecting;
             font.pixelSize:20; font.family:cjk.name
             onClicked: page.markCurrentKnown()
         }
         FlatButton {
-            x:608; y:2; width:180; height:40; text:page.matches.length ? (page.matchIndex+1)+' / '+page.matches.length+'  ›' : 'No matches'; font.pixelSize:20; enabled:page.matches.length>1; font.family:cjk.name
+            x:652; y:2; width:136; height:40; text:page.matches.length ? (page.matchIndex+1)+' / '+page.matches.length+'  ›' : 'No matches'; font.pixelSize:20; enabled:page.matches.length>1; font.family:cjk.name
             onClicked: { page.pendingUnknownFocus=false; page.matchIndex=(page.matchIndex+1)%page.matches.length; page.selectCurrent(); }
         }
         Flickable {
@@ -673,6 +770,40 @@ Item {
             x:14; y:panel.height-height-4; width:772
             height:text ? 22 : 0; visible:!!text
             text:page.migakuNotice || page.notice; color:'#95afbe'; font.pixelSize:17; font.family:cjk.name; elide:Text.ElideRight
+        }
+        Rectangle {
+            anchors.fill:parent; visible:page.queueVisible; color:'#101c26'; z:10
+            // Consume touches behind the queue, keeping the current scan intact.
+            MouseArea { anchors.fill:parent }
+            FlatButton { x:0; y:0; width:78; height:44; text:'‹ Back'; font.family:cjk.name; onClicked:page.queueVisible=false }
+            Text { x:90; y:9; text:'Card queue · '+page.queueCounts.total; color:'white'; font.pixelSize:22; font.family:cjk.name }
+            FlatButton { x:610; y:0; width:180; height:44; text:page.serverOnline ? 'Upload all' : 'Check connection'; font.family:cjk.name; onClicked:page.uploadQueue() }
+            Text {
+                x:14; y:48; width:772; color:'#80e2bc'; font.pixelSize:17; font.family:cjk.name; elide:Text.ElideRight
+                text:page.queueCounts.pending+' on pen · '+(page.queueCounts.photo || 0)+' need photo · '+page.queueCounts.sent+' sent · '+
+                     (page.queueCounts.attention+page.queueCounts.failed)+' need attention · '+
+                     (page.serverOnline ? 'connected' : 'offline; uploads automatically later')
+            }
+            ListView {
+                x:14; y:76; width:772; height:185; clip:true; model:page.queueRows; spacing:5
+                delegate:Rectangle {
+                    width:772; height:104; color:'#182c39'
+                    Text { x:8; y:4; width:540; color:'#80e2bc'; font.pixelSize:23; font.family:cjk.name; elide:Text.ElideRight; text:modelData.word+'  '+modelData.reading }
+                    Text { x:560; y:8; color:'#95afbe'; font.pixelSize:17; font.family:cjk.name; text:modelData.state==='photo' ? 'Photo needed' : modelData.state==='pending' ? (modelData.photo ? 'Word + photo saved' : 'Saved on pen') : modelData.state==='sent' ? 'Filling card…' : 'Needs attention' }
+                    Text { x:8; y:35; width:756; color:'white'; font.pixelSize:20; font.family:cjk.name; elide:Text.ElideRight; text:modelData.sentence }
+                    Text { x:8; y:66; width:modelData.state==='photo' ? 560 : 756; color:'#95afbe'; font.pixelSize:17; font.family:cjk.name; elide:Text.ElideRight; text:modelData.state==='photo' ? (modelData.error || 'Word saved; waiting for photo') : modelData.error ? page.ingestionProblem(modelData.error) : modelData.gloss }
+                    FlatButton { x:590; y:59; width:172; height:42; visible:page.photoSupported && modelData.state==='photo'; text:'Retake photo'; font.pixelSize:20; onClicked:page.retakePhoto(modelData.key) }
+                }
+                Text { anchors.centerIn:parent; visible:page.queueRows.length===0; color:'#95afbe'; text:'No cards waiting. Double-press B on a word to save it.'; font.pixelSize:21; font.family:cjk.name }
+            }
+        }
+        Rectangle {
+            anchors.fill:parent; z:20; visible:page.cameraBridge.busy; color:'#101c26'
+            MouseArea { anchors.fill:parent }
+            Text { anchors.horizontalCenter:parent.horizontalCenter; y:12; text:'Aim the scanner camera at the panel'; color:'white'; font.pixelSize:27; font.family:cjk.name }
+            Text { anchors.horizontalCenter:parent.horizontalCenter; y:53; text:page.cameraBridge.countdown>0 ? String(page.cameraBridge.countdown) : 'Taking photo…'; color:'#80e2bc'; font.pixelSize:70; font.family:cjk.name }
+            Text { anchors.horizontalCenter:parent.horizontalCenter; y:154; text:'Keep the light aimed at the page. No scanning needed.'; color:'#95afbe'; font.pixelSize:22; font.family:cjk.name }
+            FlatButton { anchors.horizontalCenter:parent.horizontalCenter; y:204; width:230; height:48; text:'Cancel photo'; font.pixelSize:23; onClicked:page.cameraBridge.cancel() }
         }
     }
 }

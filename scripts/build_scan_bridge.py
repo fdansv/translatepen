@@ -42,6 +42,8 @@ def build(toolchain_root=None, output=None):
     old = base / 'tesseract-arm64'
     # Use gcc as the link driver and select the old shared C++ runtime explicitly.
     # g++ would otherwise embed its newer static runtime (needs newer glibc).
+    subprocess.run([str(moc), str(ROOT/'native/camerabridge.h'), '-o',
+                    str(output/'moc_camerabridge.cpp')], env=environment, check=True)
     command = [str(base/'cross/usr/bin/aarch64-linux-gnu-gcc-13'),
                '--sysroot='+str(base/'sysroot'), '-shared', '-fPIC', '-O2', '-std=c++11',
                '-Wall', '-Wextra', '-ffile-prefix-map='+str(ROOT)+'=.',
@@ -50,6 +52,7 @@ def build(toolchain_root=None, output=None):
                '-I'+str(ROOT/'native'), '-I'+str(output),
                str(ROOT/'native/scanbridge.cpp'), str(output/'moc_scanbridge.cpp'), str(ROOT/'native/plugin.cpp'),
                str(ROOT/'native/migakubridge.cpp'), str(output/'moc_migakubridge.cpp'),
+               str(ROOT/'native/camerabridge.cpp'), str(output/'moc_camerabridge.cpp'),
                '-L'+str(libraries), '-L'+str(old/'usr/lib/aarch64-linux-gnu'),
                '-L'+str(old/'lib/aarch64-linux-gnu'), '-lQt5Qml', '-lQt5Network', '-lQt5Core', '-lQt5Gui',
                '-l:libstdc++.so.6',

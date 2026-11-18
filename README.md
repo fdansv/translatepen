@@ -15,6 +15,7 @@ Japanese dictionary lookup and optional Migaku integration for the **WorldPenSca
 - Sends scans to a Japanese OCR service on your computer or home server. Use a LAN connection or the [authenticated Cloudflare gateway](docs/remote-access.md); dictionary lookup is local.
 - With [Migaku Local API](https://github.com/fdansv/migaku-api), underlines unknown words, marks words known, and queues sentence cards without blocking dictionary lookup.
 - Translates the full scanned text below the definition using Migaku's configured translation language. Translation loads after local lookup; word navigation keeps the same translation.
+- Optionally [attach a page photo](docs/manga.md) when the configured server supports Anki photos.
 
 Migaku features require your own account and an authenticated Migaku extension running on the API host. Migaku synchronization and AI enrichment use Migaku's online services. Local OCR needs no internet after model download.
 
